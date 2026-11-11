@@ -2,6 +2,13 @@
 
 All notable changes to AptaRender. Newest first.
 
+## 2026-11-11 — v2.3.1
+- **Light / dark mode switch** in the bottom-right corner of the canvas. Dark (moon) is the default; click it
+  for light mode (sun). It changes the panel, buttons, menus and pop-ups only — the drawing's background is still
+  set by Export → Background, so exports look the same either way. Your choice is remembered.
+- **Clearer section headings.** Every box's heading is now larger and bold in normal case ("Manual positions"
+  instead of small grey "MANUAL POSITIONS"), on a full-width blue-tinted divider that stands out in both themes.
+
 ## 2026-11-11 — v2.3.0
 - **Letters and Circles are now one tab: Bases.** It holds, top to bottom: Letters, Circles, Color by base,
   Selected bases, and Color from file. There are now six tabs: Input · Layout · Bases · Lines · Complex · Export.
