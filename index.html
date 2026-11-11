@@ -131,6 +131,31 @@
   .cxseg .cxsegx:hover{color:var(--danger)}
   .cxseghdr{margin-top:6px}
   .cxseghdr .cxh{color:var(--muted); font-size:10px; text-align:center}
+  /* inline explanations that stay on screen: short notes, a two-column key list, inline code chips */
+  .note{color:var(--muted); font-size:11px; line-height:1.5; margin-top:8px}
+  .note b{color:var(--text); font-weight:600}
+  .keys{display:grid; grid-template-columns:auto 1fr; gap:5px 10px; align-items:baseline;
+    margin-top:8px; font-size:11px; line-height:1.45; color:var(--muted)}
+  .keys > dt{color:var(--text); font-weight:600; white-space:nowrap; margin:0}
+  .keys > dd{margin:0}
+  .grp code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px; color:var(--text);
+    background:#0e1117; border:1px solid var(--line); border-radius:4px; padding:0 4px; white-space:nowrap}
+  .fmt{margin-top:4px}
+  .fmt code{display:inline-block; padding:3px 7px; font-size:11px}
+  #cxModeDesc{min-height:3em}
+  /* (i) help: a box's .hint.tip text moves into a pop-over opened from a button in its heading */
+  .grp{position:relative}
+  .grp h2{display:flex; align-items:center; gap:6px}
+  .ibtn{margin-left:auto; flex:0 0 auto; width:18px; height:18px; padding:0; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; text-transform:none; letter-spacing:0;
+    font:italic 700 11px/1 Georgia,"Times New Roman",serif; color:var(--muted); background:transparent;
+    border:1px solid var(--line)}
+  .ibtn:hover,.ibtn.open{color:#fff; background:var(--accent); border-color:var(--accent)}
+  .ipop{display:none; position:absolute; left:8px; right:8px; z-index:5; background:#0e1117;
+    border:1px solid var(--accent); border-radius:8px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .ipop.open{display:block}
+  .ipop .hint{color:var(--text); font-size:11px; margin:0}
+  .ipop .hint + .hint{margin-top:6px}
 </style>
 </head>
 <body>
@@ -143,8 +168,7 @@
     <nav id="tabs">
       <button class="tab active" data-tab="input">Input</button>
       <button class="tab" data-tab="layout">Layout</button>
-      <button class="tab" data-tab="letters">Letters</button>
-      <button class="tab" data-tab="circles">Circles</button>
+      <button class="tab" data-tab="bases">Bases</button>
       <button class="tab" data-tab="lines">Lines</button>
       <button class="tab" data-tab="complex">Complex</button>
       <button class="tab" data-tab="export">Export</button>
@@ -167,7 +191,8 @@
         <button class="mini" id="importBtn">Import file…</button>
         <input type="file" id="fastaFile" accept=".fa,.fasta,.txt,.dbn,.seq,.dot" style="display:none">
       </div>
-      <div class="hint" style="margin-top:4px">Import also re-opens a <b>Strands .txt</b> saved from the Export tab, complex included.</div>
+      <div class="note"><b>Import file…</b> reads FASTA or sequence + structure files, and re-opens a
+        <b>Strands .txt</b> saved from Export (complexes included).</div>
       <label class="chk" style="margin-top:8px"><input type="checkbox" id="uniformStyle" checked> Uniform style across all</label>
       <div class="hint" id="docHint">Up to 20 sequences. FASTA (or seq+structure) files supported.</div>
     </div>
@@ -184,9 +209,13 @@
         <button class="mini" id="ex2">Multiloop</button>
       </div>
       <div id="err"></div>
-      <div class="hint">Use nested <code>( )</code> and <code>.</code> for the structure.
-        Drag the background to pan, Shift+drag to box-select, scroll to zoom, drag a base to reposition its branch.
-        Dot-bracket structure — ( ) for Watson-Crick pairs; [ ] or { } for non-WC pairs (drawn dashed)</div>
+      <dl class="keys">
+        <dt><code>( )</code></dt><dd>Watson-Crick pair</dd>
+        <dt><code>[ ]</code> <code>{ }</code></dt><dd>Non-WC pair, drawn dashed</dd>
+        <dt><code>.</code></dt><dd>Unpaired base</dd>
+      </dl>
+      <div class="note">Pairs must nest (no pseudoknots). On the canvas, drag to pan, scroll to zoom, and drag a
+        base to move its branch.</div>
     </div>
   </section>
 
@@ -201,10 +230,12 @@
         <button class="mini" id="fit">Fit to view</button>
         <button class="mini" id="reset0">Rotation 0°</button>
       </div>
+      <div class="hint tip">Drag the slider or type an angle (−360 to 360, negative = counter-clockwise) and
+        press Enter. Letters stay upright. <b>Fit to view</b> re-centers the drawing; scroll the canvas to zoom.</div>
     </div>
     <div class="grp">
       <h2>Manual positions</h2>
-      <div class="hint" style="margin-top:0">
+      <div class="hint tip">
         <b>Drag</b> a base: move its whole branch (the stem and everything it encloses).<br>
         <b>Alt+drag</b>: move just that one base.<br>
         <b>Ctrl/⌘+drag</b>: move just its <i>part</i> — the helix it's in, the loop ring, or the free end.<br>
@@ -216,7 +247,7 @@
     </div>
     <div class="grp">
       <h2>Ring rotation (Varna-style)</h2>
-      <div class="hint" style="margin-top:0">
+      <div class="hint tip">
         1. <b>Ctrl/⌘+click</b> an unpaired base of a loop to select its ring.<br>
         2. Click <b>Lock ring</b>.<br>
         3. <b>Drag any helix</b> attached to the ring (or the rest of the molecule) to swing it around the
@@ -246,13 +277,14 @@
         <button class="mini" id="flipH" title="Mirror left ↔ right on screen">Flip ↔ horizontal</button>
         <button class="mini" id="flipV" title="Mirror top ↕ bottom on screen">Flip ↕ vertical</button>
       </div>
-      <div class="hint">Flips mirror the selected bases about the pivot. With nothing selected they flip the
+      <div class="hint tip">Type an angle and click <b>Rotate selected</b> to turn the selected bases
+        (+ = clockwise). The pivot is the point they turn about. Flips mirror the selected bases about the pivot. With nothing selected they flip the
         whole drawing about its center. Letters stay readable (they aren't mirrored).</div>
       <div class="hint" id="rotSelInfo"></div>
     </div>
     <div class="grp">
       <h2>Bend selected curve</h2>
-      <div class="hint" style="margin-top:0">Select a stretch of unpaired bases (Ctrl/⌘+click a free end or loop,
+      <div class="hint tip">Select a stretch of unpaired bases (Ctrl/⌘+click a free end or loop,
         or Shift+drag), then curl it. <b>↻</b> / <b>↺</b> make it turn clockwise / counter-clockwise on screen
         as it runs away from the base it hangs from (a loop runs 5′→3′). Each click curls it more; the other
         button flattens it, then bends it the other way. Bases stay one bond apart and the base it hangs from
@@ -278,81 +310,29 @@
         <option value="L">L-shape (90° corner)</option>
         <option value="perp">Perpendicular (90° out)</option>
       </select>
+      <div class="hint tip">How unpaired 5′/3′ ends (not enclosed by any base pair) are drawn.
+        <b>Natural</b> curves them inward like a loop; <b>Flatten</b> keeps them straight; <b>L-shape</b> runs one
+        bond straight, then turns 90°; <b>Perpendicular</b> turns 90° outward right away.
+        Changing the style clears hand-placed positions on the tail bases.</div>
     </div>
   </section>
 
-  <!-- ============ LETTERS ============ -->
-  <section class="pane" data-pane="letters">
+  <!-- ============ BASES (letters + circles) ============ -->
+  <section class="pane" data-pane="bases">
     <div class="grp">
-      <h2>Type</h2>
-      <div class="flexlabel"><label>Font size (all bases)</label><span class="val" id="fontVal">18 px</span></div>
+      <h2>Letters</h2>
+      <div class="flexlabel"><label>Letter size</label><span class="val" id="fontVal">18 px</span></div>
       <input type="range" id="font" min="8" max="60" value="18">
       <label class="chk"><input type="checkbox" id="cLetter" checked> Show base letters</label>
       <label class="chk"><input type="checkbox" id="cBold"> Bold letters</label>
+      <div class="hint tip">Letter size changes only the letters. Circles have their own size below.
+        Position numbers and 5′/3′ labels are sized relative to the letter size.</div>
     </div>
     <div class="grp">
-      <h2>Color by base</h2>
-      <div class="idrow"><span>A</span><input type="color" data-id="A" value="#4c9f70"></div>
-      <div class="idrow"><span>U</span><input type="color" data-id="U" value="#e15554"></div>
-      <div class="idrow"><span>T</span><input type="color" data-id="T" value="#e1bc29"></div>
-      <div class="idrow"><span>G</span><input type="color" data-id="G" value="#7768ae"></div>
-      <div class="idrow"><span>C</span><input type="color" data-id="C" value="#3b8ea5"></div>
-      <div class="row" style="margin-top:8px">
-        <button class="mini" id="applyId">Apply palette</button>
-      </div>
-      <label>Monochrome letter color</label>
-      <div class="row">
-        <input type="color" id="monoColor" value="#000000">
-        <button class="mini" id="mono">Apply monochrome</button>
-      </div>
-    </div>
-    <div class="grp">
-      <h2>Selected letters</h2>
-      <div class="hint" style="margin-top:0">Click a base on the canvas to select it. Shift-click to add.</div>
-      <label>Letter color for selection</label>
-      <div class="row">
-        <input type="color" id="selColor" value="#ffd166">
-        <button class="mini" id="applySel">Apply</button>
-      </div>
-    </div>
-    <div class="grp">
-      <h2>Size of selected bases</h2>
-      <div class="hint" style="margin-top:0">Enlarge or shrink just the selected bases (letter and circle together),
-        relative to the font size above. The font-size slider still changes everything.</div>
-      <div class="flexlabel"><label>Size</label><span class="val" id="selSizeVal">150%</span></div>
-      <input type="range" id="selSize" min="50" max="300" step="10" value="150">
-      <div class="row" style="margin-top:6px">
-        <button class="mini" id="applySize">Apply to selected</button>
-        <button class="mini" id="resetSize">Reset all sizes</button>
-      </div>
-      <div class="hint" id="sizeInfo"></div>
-    </div>
-    <div class="grp">
-      <h2>Color from file</h2>
-      <div class="hint" style="margin-top:0">Upload a .txt with one line per position (or range):
-        <code>position&nbsp;[base]&nbsp;color&nbsp;[target]</code>, e.g. <code>12 G #e15554</code>
-        or <code>5-9 orange circle</code>. Download the sample to see the full format.</div>
-      <label>Apply to (when a line doesn't say)</label>
-      <select id="colorTarget">
-        <option value="letter">Letters</option>
-        <option value="circle">Circle fill</option>
-        <option value="both">Both</option>
-      </select>
-      <div class="row" style="margin-top:8px">
-        <button class="mini" id="colorFileBtn">Upload color file…</button>
-        <button class="mini" id="colorSample">Download sample</button>
-        <button class="mini" id="colorSave" title="Save the colors you see now, to re-apply later">Save current colors</button>
-        <input type="file" id="colorFile" accept=".txt,.tsv,.csv,text/plain" style="display:none">
-      </div>
-      <div class="hint" id="colorFileInfo"></div>
-    </div>
-  </section>
-
-  <!-- ============ CIRCLES ============ -->
-  <section class="pane" data-pane="circles">
-    <div class="grp">
-      <h2>Base circles</h2>
+      <h2>Circles</h2>
       <label class="chk"><input type="checkbox" id="cCircle"> Show base circles</label>
+      <div class="flexlabel"><label>Circle size (diameter)</label><span class="val" id="circSizeVal">26 px</span></div>
+      <input type="range" id="circSize" min="6" max="120" step="1" value="26">
       <label>Circle frame</label>
       <div class="split">
         <select id="frameMode">
@@ -373,18 +353,79 @@
         </select>
         <input type="color" id="fillColor" value="#ffffff" style="flex:0 0 46px">
       </div>
+      <div class="hint tip">Circle size is independent of the letter size, so you can draw small letters in
+        big circles or the other way round. Lines stop at whichever is larger, the circle or the letter.</div>
     </div>
     <div class="grp">
-      <h2>Selected circle fill</h2>
-      <div class="hint" style="margin-top:0">Click a base on the canvas to select it, then apply a fill.</div>
-      <label>Circle fill for selection</label>
+      <h2>Color by base</h2>
+      <div class="idrow"><span>A</span><input type="color" data-id="A" value="#4c9f70"></div>
+      <div class="idrow"><span>U</span><input type="color" data-id="U" value="#e15554"></div>
+      <div class="idrow"><span>T</span><input type="color" data-id="T" value="#e1bc29"></div>
+      <div class="idrow"><span>G</span><input type="color" data-id="G" value="#7768ae"></div>
+      <div class="idrow"><span>C</span><input type="color" data-id="C" value="#3b8ea5"></div>
+      <div class="row" style="margin-top:8px">
+        <button class="mini" id="applyId">Apply palette</button>
+      </div>
+      <label>Monochrome letter color</label>
+      <div class="row">
+        <input type="color" id="monoColor" value="#000000">
+        <button class="mini" id="mono">Apply monochrome</button>
+      </div>
+      <div class="hint tip">Pick a color for each base, then <b>Apply palette</b> to recolor every letter.
+        <b>Apply monochrome</b> sets every letter to one color. Both replace colors set on single bases.
+        "By base color" in the Circles box uses this palette too.</div>
+    </div>
+    <div class="grp">
+      <h2>Selected bases</h2>
+      <label>Letter color</label>
+      <div class="row">
+        <input type="color" id="selColor" value="#ffd166">
+        <button class="mini" id="applySel">Apply</button>
+      </div>
+      <label>Circle fill</label>
       <div class="row">
         <input type="color" id="selCircleColor" value="#ffd166">
         <button class="mini" id="applySelCircle">Apply</button>
       </div>
+      <div class="flexlabel"><label>Letter size</label><span class="val" id="selSizeVal">150%</span></div>
+      <div class="row">
+        <input type="range" id="selSize" min="50" max="300" step="10" value="150">
+        <button class="mini" id="applySize">Apply</button>
+      </div>
+      <div class="flexlabel"><label>Circle size</label><span class="val" id="selCSizeVal">150%</span></div>
+      <div class="row">
+        <input type="range" id="selCSize" min="50" max="300" step="10" value="150">
+        <button class="mini" id="applyCSize">Apply</button>
+      </div>
       <div class="row" style="margin-top:8px">
         <button class="mini" id="resetCircle">Reset all fills</button>
+        <button class="mini" id="resetSize">Reset all sizes</button>
       </div>
+      <div class="hint" id="sizeInfo"></div>
+      <div class="hint tip">Click a base on the canvas to select it; Shift-click to add more, or Shift+drag the
+        background to box-select. Then apply a letter color, circle fill or size to just those bases.
+        Sizes are relative to the Letter size / Circle size above. <b>Right-click a base</b> to style that one
+        base directly.</div>
+    </div>
+    <div class="grp">
+      <h2>Color from file</h2>
+      <div class="note" style="margin-top:0">A .txt file with one line per position or range:</div>
+      <div class="fmt"><code>position [base] color [target]</code></div>
+      <div class="note" style="margin-top:6px">e.g. <code>12 G #e15554</code> or <code>5-9 orange circle</code>.
+        <b>Download sample</b> shows the full format.</div>
+      <label>Apply to (when a line doesn't say)</label>
+      <select id="colorTarget">
+        <option value="letter">Letters</option>
+        <option value="circle">Circle fill</option>
+        <option value="both">Both</option>
+      </select>
+      <div class="row" style="margin-top:8px; flex-wrap:wrap">
+        <button class="mini" id="colorFileBtn">Upload color file…</button>
+        <button class="mini" id="colorSample">Download sample</button>
+        <button class="mini" id="colorSave" title="Save the colors you see now, to re-apply later">Save current colors</button>
+        <input type="file" id="colorFile" accept=".txt,.tsv,.csv,text/plain" style="display:none">
+      </div>
+      <div class="hint" id="colorFileInfo"></div>
     </div>
   </section>
 
@@ -402,8 +443,8 @@
     </div>
     <div class="grp">
       <h2>H-bond colors</h2>
-      <div class="hint" style="margin-top:0">Click a base-pair rung to select it. Shift-click to add.
-        Unselected rungs use the global rung color.</div>
+      <div class="hint tip">Click a base-pair rung on the canvas to select it; Shift-click to add more.
+        Pick a color and click <b>Apply</b>. Unselected rungs use the rung color above. (Single-sequence view.)</div>
       <label>Color for selected bonds</label>
       <input type="color" id="bondColor" value="#e15554">
       <div class="row" style="margin-top:8px">
@@ -434,7 +475,8 @@
         <input type="color" id="endColor" value="#333333" style="flex:0 0 46px">
         <label class="chk" style="margin:0 0 0 10px"><input type="checkbox" id="endBold" checked> Bold</label>
       </div>
-      <div class="hint">Sizes are relative to the letter size. <b>Right-click a base</b> to show or hide just
+      <div class="hint tip"><b>Number every</b> N labels every Nth base (and base 1); 0 turns numbering off.
+        Sizes are relative to the letter size. <b>Right-click a base</b> to show or hide just
         its number, or to restyle that one base.</div>
     </div>
   </section>
@@ -444,8 +486,8 @@
     <div class="grp">
       <h2>Complexes <span id="cxCount"></span></h2>
       <div id="cxlist"></div>
-      <div class="hint" id="cxHint" style="margin-top:8px">A complex joins two of your sequences with a
-        manually-set duplex region. Build one below, then open the Letters/Circles tabs to color each strand.</div>
+      <div class="note" id="cxHint">Two of your sequences joined by duplex regions you choose. Build one
+        below; color its strands on the <b>Bases</b> tab.</div>
     </div>
     <div class="grp">
       <h2>Build a complex</h2>
@@ -453,36 +495,29 @@
       <select id="cxDocA"></select>
       <label>Strand B</label>
       <select id="cxDocB"></select>
-      <label style="margin-top:6px">Duplex regions (1-based, inclusive) — each A range pairs antiparallel with its B range</label>
+      <label style="margin-top:6px">Duplex regions</label>
       <div class="cxseg cxseghdr"><span class="cxseglbl">A</span><span class="cxnum cxh">start</span><span class="cxnum cxh">end</span>
         <span class="cxseglbl">B</span><span class="cxnum cxh">start</span><span class="cxnum cxh">end</span><span class="cxsegx"></span></div>
       <div id="cxSegList"></div>
       <button class="mini" id="cxAddSeg" style="margin-top:6px">+ Add duplex region</button>
+      <div class="note">Positions are 1-based and inclusive. Each A range pairs antiparallel with its B range
+        (A start ↔ B end), so both must be the same length.</div>
       <label style="margin-top:8px">Mode</label>
       <select id="cxMode">
-        <option value="replace">Replace — break any existing pair that touches/spans the region</option>
-        <option value="side">Side-by-side — keep A's own pairing, attach B alongside it</option>
+        <option value="replace">Replace</option>
+        <option value="side">Side-by-side</option>
       </select>
+      <div class="note" id="cxModeDesc"></div>
       <div class="row" style="margin-top:9px">
         <button class="primary" id="cxBuild">Build complex</button>
       </div>
       <div id="cxErr" class="hint" style="color:var(--danger); white-space:pre-wrap"></div>
-      <div class="hint">A[aStart..aEnd] pairs antiparallel with B[bStart..bEnd] — ranges must be equal length.
-        <b>Replace mode:</b> any existing base pair that touches or spans the duplex region (in either
-        strand) is broken, and the region becomes a fresh straight duplex.
-        <b>Side-by-side mode:</b> strand A's own structure is left completely untouched (including
-        pairs inside the chosen range) and B is laid out running parallel to it — the same A bases can
-        end up with two drawn bonds (their own, plus the new one to B). This isn't biophysically
-        possible for real base pairing, but the tool won't stop you — draw what communicates the
-        figure you need. <b>Multiple duplex regions</b> are supported in Replace mode (each is drawn as its
-        own ladder, with the single-stranded bases between them as connecting loops — drag to tidy if a
-        set stacks awkwardly). Side-by-side mode uses the first region only.</div>
     </div>
     <div class="grp">
       <h2>Duplex rung color</h2>
       <input type="color" id="dupColor" value="#ffd166">
-      <div class="hint">Intramolecular H-bonds keep using the Lines tab's rung color / per-bond colors from
-        each strand's own sequence. Individual duplex rungs aren't separately colorable in this version.</div>
+      <div class="note">Colors the rungs between the two strands. Pairs within each strand keep their
+        <b>Lines</b>-tab colors.</div>
     </div>
   </section>
 
@@ -498,7 +533,7 @@
       <h2>Export</h2>
       <label>File name</label>
       <input type="text" id="expName" spellcheck="false" autocomplete="off" placeholder="aptarender">
-      <div class="hint" style="margin-top:3px">Leave blank to use the sequence's name. .svg / .png is added for you.</div>
+      <div class="note" style="margin-top:4px">Blank uses the sequence's name; .svg / .png is added for you.</div>
       <label class="chk" id="expAskWrap"><input type="checkbox" id="expAsk"> Open a Save dialog (pick name &amp; folder each time)</label>
       <div class="flexlabel" style="margin-top:8px"><label>PNG scale</label><span class="val" id="pngDims">—</span></div>
       <input type="range" id="pngScale" min="1" max="12" step="1" value="2">
@@ -506,14 +541,19 @@
         <button class="mini" id="expSvg">SVG</button>
         <button class="mini" id="expPng">PNG</button>
       </div>
-      <div class="hint">SVG stays fully editable in Illustrator/Inkscape — every base is its own text element. PNG dimensions shown above.</div>
+      <dl class="keys">
+        <dt>SVG</dt><dd>Editable vector for Illustrator / Inkscape; each base is its own text.</dd>
+        <dt>PNG</dt><dd>Image at the pixel size shown next to PNG scale.</dd>
+      </dl>
       <label style="margin-top:10px">Save as text (to re-open later)</label>
       <div class="row" style="margin-top:4px">
         <button class="mini" id="expStrands" title="Sequences, structures and complex regions of what's open">Strands .txt</button>
         <button class="mini" id="expColors" title="Current letter and circle colors, in the color-file format">Colors .txt</button>
       </div>
-      <div class="hint">Strands: re-open with Input → <b>Import file…</b> (a complex is rebuilt with its duplex
-        regions). Colors: re-apply with Letters → <b>Upload color file…</b>.</div>
+      <dl class="keys">
+        <dt>Strands</dt><dd>Re-open with Input → <b>Import file…</b> (complexes are rebuilt).</dd>
+        <dt>Colors</dt><dd>Re-apply with Bases → <b>Upload color file…</b></dd>
+      </dl>
       <div class="hint" id="expInfo"></div>
     </div>
     <div class="grp tight" id="contact">
@@ -555,7 +595,8 @@ const M = {
   bs:{},          // per-base extras {i:{num:'on'|'off', sw:outline width, sc:outline color, nc:number color, nring:circle the number}}
   circleColor:{}, // per-base circle-fill override, keyed by index; falls back to fill mode
   bondColor:{},   // per-H-bond color, keyed by lower base index; falls back to global
-  size:{},        // per-base size multiplier (letter AND circle), keyed by index; absent = 1
+  size:{},        // per-base LETTER size multiplier, keyed by index; absent = 1
+  csize:{},       // per-base CIRCLE size multiplier, keyed by index; absent = 1 (separate from size)
   selected:new Set(),
   selBond:new Set(),
   // view
@@ -1394,20 +1435,23 @@ function computeSideHybridLayout(seqA, ptAOrig, seqB, ptBOrig, region, S, tailMo
    strands() fresh each time rather than caching it: build()/resetCircle etc. reassign M's arrays. */
 const FALLBACK_COLOR="#c8cdd6";   // letter / identity color for any base without a palette entry
 const SEL_RING="#ff8c1a", BOND_HI="#ffd166", NUM_COLOR="#8a93a3";
+// Before v2.3.0 one per-base `size` scaled letter AND circle. Docs saved then have no csize map:
+// give them one copied from size, so their circles keep the size they were drawn at.
+function docCSize(d){ if(!d.csize) d.csize={...(d.size||{})}; return d.csize; }
 function strands(){
   if(CM.active){
     const cx=complexes[CM.idx]; if(!cx) return [];
     const dA=docs[cx.docA]||newDoc(), dB=docs[cx.docB]||newDoc();
     return [
       {tag:'A', seq:CM.seqA, n:CM.nA, pt:CM.ptA, nonWC:CM.nonWCA, x:CM.xA, y:CM.yA, offX:CM.offXA, offY:CM.offYA,
-       sel:CM.selA, color:dA.color, circleColor:dA.circleColor, bondColor:dA.bondColor, size:dA.size, bs:(dA.bs=dA.bs||{}), selBond:null},
+       sel:CM.selA, color:dA.color, circleColor:dA.circleColor, bondColor:dA.bondColor, size:dA.size, csize:docCSize(dA), bs:(dA.bs=dA.bs||{}), selBond:null},
       {tag:'B', seq:CM.seqB, n:CM.nB, pt:CM.ptB, nonWC:CM.nonWCB, x:CM.xB, y:CM.yB, offX:CM.offXB, offY:CM.offYB,
-       sel:CM.selB, color:dB.color, circleColor:dB.circleColor, bondColor:dB.bondColor, size:dB.size, bs:(dB.bs=dB.bs||{}), selBond:null},
+       sel:CM.selB, color:dB.color, circleColor:dB.circleColor, bondColor:dB.bondColor, size:dB.size, csize:docCSize(dB), bs:(dB.bs=dB.bs||{}), selBond:null},
     ];
   }
   if(M.n===0) return [];
   return [{tag:'S', seq:M.seq, n:M.n, pt:M.pt, nonWC:M.nonWC, x:M.x, y:M.y, offX:M.offX, offY:M.offY,
-    sel:M.selected, color:M.color, circleColor:M.circleColor, bondColor:M.bondColor, size:M.size, bs:M.bs, selBond:M.selBond}];
+    sel:M.selected, color:M.color, circleColor:M.circleColor, bondColor:M.bondColor, size:M.size, csize:M.csize, bs:M.bs, selBond:M.selBond}];
 }
 // inter-strand (hetero-duplex) rungs as [[strandIdx,i],[strandIdx,j]] — empty outside complex mode
 function heteroPairs(){
@@ -1422,7 +1466,15 @@ function heteroPairs(){
 }
 function hasContent(){ return strands().some(st=>st.n>0); }
 const effX=(st,i)=>st.x[i]+(st.offX[i]||0);
-const baseScale=(st,i)=>(st.size&&st.size[i])||1;   // per-base size multiplier (letter + circle)    // effective model coord = auto layout + manual offset
+const baseScale=(st,i)=>(st.size&&st.size[i])||1;     // per-base letter size multiplier
+const circScale=(st,i)=>(st.csize&&st.csize[i])||1;   // per-base circle size multiplier
+// Base geometry in display px. Letter and circle sizes are independent; anything that has to keep
+// clear of a base (bond ends, hit target, selection ring, label placement) uses its FOOTPRINT, the
+// larger of the letter's own radius and (when circles are shown) the circle. At the default sizes
+// circle radius = 0.72 x font, the same as the letter radius, so default drawings are unchanged.
+function circleR(){ return (+$("circSize").value||26)/2; }
+function letterR(st,i){ return M.font*0.72*baseScale(st,i); }
+function footR(st,i){ const l=letterR(st,i); return $("cCircle").checked ? Math.max(l, circleR()*circScale(st,i)) : l; }
 const effY=(st,i)=>st.y[i]+(st.offY[i]||0);
 // display coords: every strand rotated by M.rot about the COMBINED centroid (text stays upright —
 // glyphs are drawn at the rotated point, never rotated themselves). Returns one array per strand.
@@ -1446,11 +1498,11 @@ function bbox(points, pad){
   return {minx,miny,maxx,maxy,W:maxx-minx,H:maxy-miny};
 }
 function contentBox(){
-  let mx=1; for(const st of strands()) for(const k in (st.size||{})) mx=Math.max(mx,st.size[k]);
   const sts=strands(), P=displayPoints(sts), pts=P.flat().slice();
+  let mx=0; for(const st of sts) for(let i=0;i<st.n;i++) mx=Math.max(mx,footR(st,i));
   // big numbers / end labels can sit further out than the default padding: include their extents
   for(const L of labelLayout(sts,P).values()) pts.push({x:L.x-L.r,y:L.y-L.r},{x:L.x+L.r,y:L.y+L.r});
-  return bbox(pts, M.font*2.2*mx);
+  return bbox(pts, Math.max(M.font*2.2, mx*(2.2/0.72)));   // = 2.2 x font at default sizes
 }
 
 // the closed sub-structure "branch" rooted at base i, for drag-to-reposition.
@@ -1512,7 +1564,8 @@ function buildScene(interactive){
         showCircle=$("cCircle").checked, showLetter=$("cLetter").checked, bold=$("cBold").checked;
   const frameMode=$("frameMode").value, fillMode=$("fillMode").value,
         frameColor=$("frameColor").value, fillColor=$("fillColor").value;
-  const gap=font*0.62, circR=font*0.72, circW=+$("frameW").value;
+  const circR=circleR(), circW=+$("frameW").value;
+  const gap=(st,i)=>footR(st,i)*(0.62/0.72);   // bond ends stop short of the base (0.62 x font at default)
   const rungW=Math.max(1.4,font*0.11);
   const E=(t,a,text)=>{ els.push({t,a,text}); };
   const seg=(p,q,pad,padQ)=>{ const dx=q.x-p.x,dy=q.y-p.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
@@ -1527,11 +1580,11 @@ function buildScene(interactive){
   }
   if(showPair){
     for(const [[sa,ia],[sb,ib]] of heteroPairs())
-      line(seg(P[sa][ia],P[sb][ib],gap*baseScale(sts[sa],ia),gap*baseScale(sts[sb],ib)), dupColor, Math.max(1.6,font*0.13));
+      line(seg(P[sa][ia],P[sb][ib],gap(sts[sa],ia),gap(sts[sb],ib)), dupColor, Math.max(1.6,font*0.13));
     sts.forEach((st,s)=>{
       for(let i=0;i<st.n;i++){
         const j=st.pt[i]; if(j<=i) continue;
-        const sg=seg(P[s][i],P[s][j],gap*baseScale(st,i),gap*baseScale(st,j));
+        const sg=seg(P[s][i],P[s][j],gap(st,i),gap(st,j));
         if(interactive && st.selBond && st.selBond.has(i))
           line(sg, BOND_HI, rungW+6/M.zoom+2, {opacity:0.9});
         // non-WC pairs ([ ] / { } / < > in the input) are dashed so they read as different from a
@@ -1545,7 +1598,7 @@ function buildScene(interactive){
     });
   }
   if(showBack) sts.forEach((st,s)=>{
-    for(let i=0;i<st.n-1;i++) line(seg(P[s][i],P[s][i+1],gap*0.92*baseScale(st,i),gap*0.92*baseScale(st,i+1)), backColor, Math.max(1,font*0.08));
+    for(let i=0;i<st.n-1;i++) line(seg(P[s][i],P[s][i+1],gap(st,i)*0.92,gap(st,i+1)*0.92), backColor, Math.max(1,font*0.08));
   });
   // bases in two passes so letters always sit ON TOP of every circle, even where filled circles overlap
   sts.forEach((st,s)=>{
@@ -1561,10 +1614,10 @@ function buildScene(interactive){
         if(b.sc) stroke=b.sc; else if(stroke==='none' && b.sw>0) stroke=frameColor;
         const sw=(b.sw!==undefined)?b.sw:circW;
         if(sw<=0) stroke='none';
-        const a={cx:p.x,cy:p.y,r:circR*baseScale(st,i),fill,stroke}; if(stroke!=='none') a['stroke-width']=sw;
+        const a={cx:p.x,cy:p.y,r:circR*circScale(st,i),fill,stroke}; if(stroke!=='none') a['stroke-width']=sw;
         E('circle',a);
       }
-      if(interactive) E('circle',{cx:p.x,cy:p.y,r:Math.max(circR,font*0.6)*baseScale(st,i),fill:'transparent',class:'base-hit','data-s':s,'data-i':i});
+      if(interactive) E('circle',{cx:p.x,cy:p.y,r:Math.max(footR(st,i),font*0.6*baseScale(st,i)),fill:'transparent',class:'base-hit','data-s':s,'data-i':i});
     }
   });
   const labels = labelLayout(sts,P);
@@ -1572,9 +1625,9 @@ function buildScene(interactive){
     for(let i=0;i<st.n;i++){
       const p=P[s][i];
       if(interactive && st.sel.has(i))
-        E('circle',{cx:p.x,cy:p.y,r:font*0.82*baseScale(st,i),fill:'none',stroke:SEL_RING,'stroke-width':2/M.zoom+0.8});
+        E('circle',{cx:p.x,cy:p.y,r:footR(st,i)*(0.82/0.72),fill:'none',stroke:SEL_RING,'stroke-width':2/M.zoom+0.8});
       if(interactive && baseMenu && baseMenu.hi.has(s+':'+i))
-        E('circle',{cx:p.x,cy:p.y,r:font*0.95*baseScale(st,i),fill:'none',stroke:'#5b8cff','stroke-width':2/M.zoom+1,
+        E('circle',{cx:p.x,cy:p.y,r:footR(st,i)*(0.95/0.72),fill:'none',stroke:'#5b8cff','stroke-width':2/M.zoom+1,
           'stroke-dasharray':`${4/M.zoom+2},${3/M.zoom+1.5}`});
       for(const key of ['n:'+s+':'+i, 'e:'+s+':'+i]){
         const lab=labels.get(key); if(!lab) continue;
@@ -1609,7 +1662,7 @@ function buildScene(interactive){
 //   5'/3' end labels when "Show 5′ / 3′ end labels" is on — every strand's first and last base;
 //   numbers by the "Number every" rule (and base 1), overridden per base by bs[i].num ('on'/'off').
 function labelLayout(sts,P){
-  const font=M.font, circR=font*0.72, items=[];
+  const font=M.font, items=[];
   const numEvery=parseInt($("numEvery").value)||0;
   if($("endLabels").checked){
     const sz=font*(+$("endSize").value||80)/100, col=$("endColor").value, bold=$("endBold").checked;
@@ -1627,13 +1680,13 @@ function labelLayout(sts,P){
         ring:!!b.nring,family:'ui-monospace,monospace'});
     }
   });
-  return items.length ? placeLabels(sts,P,font,circR,items) : new Map();
+  return items.length ? placeLabels(sts,P,font,items) : new Map();
 }
-function placeLabels(sts,P,font,circR,items){
+function placeLabels(sts,P,font,items){
   const pts=[], segs=[];
   sts.forEach((st,s)=>{
     for(let i=0;i<st.n;i++){
-      pts.push({x:P[s][i].x, y:P[s][i].y, r:circR*baseScale(st,i)});
+      pts.push({x:P[s][i].x, y:P[s][i].y, r:footR(st,i)});
       if(i<st.n-1) segs.push([P[s][i],P[s][i+1]]);
       if(st.pt[i]>i) segs.push([P[s][i],P[s][st.pt[i]]]);
     }
@@ -1660,7 +1713,7 @@ function placeLabels(sts,P,font,circR,items){
       const order=[0]; for(let k=1;k<=12;k++){ order.push(k); if(k<12) order.push(-k); }
       let best=null;
       for(const ring of [1,1.5,2.1]){
-        const d=circR*baseScale(st,i)+rl+font*0.12+(ring-1)*Math.max(font*0.9,rl*1.6);
+        const d=footR(st,i)+rl+font*0.12+(ring-1)*Math.max(font*0.9,rl*1.6);
         for(const k of order){
           const a=a0+k*Math.PI/12, c={x:p.x+Math.cos(a)*d, y:p.y+Math.sin(a)*d};
           let clr=Infinity;
@@ -1676,7 +1729,7 @@ function placeLabels(sts,P,font,circR,items){
       const lab={x:best.x, y:best.y, r:rl, txt, size:it.size, color:it.color, bold:it.bold, family:it.family, ringR};
       if(best.ring>1){
         const ux=Math.cos(best.a), uy=Math.sin(best.a), dd=Math.hypot(best.x-p.x,best.y-p.y);
-        const r0=circR*baseScale(st,i)+font*0.08;
+        const r0=footR(st,i)+font*0.08;
         lab.leader={x1:p.x+ux*r0, y1:p.y+uy*r0, x2:p.x+ux*(dd-rl), y2:p.y+uy*(dd-rl)};
       }
       out.set(it.key, lab); placed.push({x:best.x,y:best.y,r:rl});
@@ -1803,10 +1856,13 @@ function applyRingDrag(rd){
 }
 
 /* ---------- per-base size ---------- */
-function applySelectedSize(){
-  const v=(+$("selSize").value||100)/100; let n=0;
-  for(const st of strands()) st.sel.forEach(i=>{ if(v===1) delete st.size[i]; else st.size[i]=v; n++; });
-  $("sizeInfo").textContent = n ? `Set ${n} base${n===1?'':'s'} to ${Math.round(v*100)}%.` : "Select some bases first.";
+// which='letter' -> st.size, 'circle' -> st.csize (the two are independent)
+function applySelectedSize(which){
+  const circ=which==='circle', v=(+$(circ?"selCSize":"selSize").value||100)/100; let n=0;
+  for(const st of strands()){ const m=circ?st.csize:st.size;
+    st.sel.forEach(i=>{ if(v===1) delete m[i]; else m[i]=v; n++; }); }
+  if(n && circ && !$("cCircle").checked) $("cCircle").checked=true;   // a circle size you can't see is confusing
+  $("sizeInfo").textContent = n ? `Set the ${circ?'circle':'letter'} size of ${n} base${n===1?'':'s'} to ${Math.round(v*100)}%.` : "Select some bases first.";
   render(); return n>0;
 }
 
@@ -1929,7 +1985,7 @@ function strandsFileText(){
 function colorFileText(){
   const sts=strands(); if(!sts.length) return null;
   const L=["# AptaRender color file — current colors of the open "+(CM.active?"complex":"sequence"),
-    "# Re-apply with Letters → Upload color file…   Format: position [base] color target",
+    "# Re-apply with Bases → Upload color file…   Format: position [base] color target",
     "# (ranges a-b share one color; A:/B: = strand inside a complex)", ""];
   sts.forEach(st=>{
     const pre = CM.active ? st.tag+':' : '';
@@ -2023,7 +2079,7 @@ function build(){
   M.x=lay.x; M.y=lay.y;
   M.offX=new Array(M.n).fill(0); M.offY=new Array(M.n).fill(0);
   M.color=new Array(M.n);
-  M.selected.clear(); M.selBond.clear(); M.bondColor={}; M.circleColor={}; M.size={}; M.bs={};
+  M.selected.clear(); M.selBond.clear(); M.bondColor={}; M.circleColor={}; M.size={}; M.csize={}; M.bs={};
   applyPalette();      // default coloring
   updateSelInfo(); updateBondInfo();
   M.rot=0; setRotUI(); // every Render starts upright, at 0°
@@ -2271,8 +2327,9 @@ function openBaseMenu(s,i,x,y){
     <div class="bmrow"><span>Circle fill</span><input type="color" id="bmFill"><button class="mini x" id="bmFillX" title="Back to the default fill">default</button></div>
     <div class="bmrow"><span>Outline color</span><input type="color" id="bmOut"><button class="mini x" id="bmOutX" title="Back to the default outline color">default</button></div>
     <div class="bmrow"><span>Outline width</span><input type="range" id="bmSW" min="0" max="12" step="0.5"><span class="bmval" id="bmSWv"></span></div>
-    <div class="bmrow"><span></span><button class="mini x" id="bmSWX" title="Back to the Circles-tab frame thickness">default width</button></div>
-    <div class="bmrow"><span>Size</span><input type="range" id="bmSize" min="50" max="300" step="10"><span class="bmval" id="bmSizev"></span></div>
+    <div class="bmrow"><span></span><button class="mini x" id="bmSWX" title="Back to the Bases-tab frame thickness">default width</button></div>
+    <div class="bmrow"><span>Letter size</span><input type="range" id="bmSize" min="50" max="300" step="10"><span class="bmval" id="bmSizev"></span></div>
+    <div class="bmrow"><span>Circle size</span><input type="range" id="bmCSize" min="50" max="300" step="10"><span class="bmval" id="bmCSizev"></span></div>
     <div class="bmrow" style="margin-top:10px"><button class="mini" id="bmReset">Reset base</button>
       <span style="flex:1"></span><button class="mini" id="bmClose">Done</button></div>`;
   el.querySelector(".bmhead").textContent="Base "+baseName(s,i);
@@ -2285,6 +2342,7 @@ function openBaseMenu(s,i,x,y){
   $("bmOut").value=toHex(outNow, "#000000");
   $("bmSW").value=swNow; $("bmSWv").textContent=swNow+" px";
   const sz=Math.round(((st.size&&st.size[i])||1)*100); $("bmSize").value=sz; $("bmSizev").textContent=sz+"%";
+  const csz=Math.round(circScale(st,i)*100); $("bmCSize").value=csz; $("bmCSizev").textContent=csz+"%";
   if(st.sel.has(i) && nSel>1) $("bmScope").value='sel';
   const bs=(st2,k)=>(st2.bs[k]=st2.bs[k]||{});
   $("bmScope").onchange=bmRefreshHi;
@@ -2306,11 +2364,12 @@ function openBaseMenu(s,i,x,y){
   live("bmOut",   (t,k,v)=>{ bmCircles(); bs(t,k).sc=v; });
   live("bmSW",    (t,k,v)=>{ bmCircles(); bs(t,k).sw=+v; $("bmSWv").textContent=v+" px"; });
   live("bmSize",  (t,k,v)=>{ const f=+v/100; if(f===1) delete t.size[k]; else t.size[k]=f; $("bmSizev").textContent=v+"%"; });
+  live("bmCSize", (t,k,v)=>{ bmCircles(); const f=+v/100; if(f===1) delete t.csize[k]; else t.csize[k]=f; $("bmCSizev").textContent=v+"%"; });
   $("bmFillX").onclick=()=>{ bmApply((t,k)=>{ delete t.circleColor[k]; }); touch(); };
   $("bmOutX").onclick =()=>{ bmApply((t,k)=>{ if(t.bs[k]) delete t.bs[k].sc; }); touch(); };
   $("bmSWX").onclick  =()=>{ bmApply((t,k)=>{ if(t.bs[k]) delete t.bs[k].sw; }); const w=+$("frameW").value; $("bmSW").value=w; $("bmSWv").textContent=w+" px"; touch(); };
   $("bmReset").onclick=()=>{ readPalette(); bmApply((t,k)=>{ t.color[k]=M.palette[t.seq[k]]||FALLBACK_COLOR;
-      delete t.circleColor[k]; delete t.size[k]; delete t.bs[k]; }); touch(); closeBaseMenu(); };
+      delete t.circleColor[k]; delete t.size[k]; delete t.csize[k]; delete t.bs[k]; }); touch(); closeBaseMenu(); };
   $("bmClose").onclick=closeBaseMenu;
   baseMenu={s,i,hi:new Set()};
   el.style.display="block";
@@ -2537,7 +2596,7 @@ $("expPng").onclick=()=>{ if(!hasContent())return;
 const LIMIT=20;
 let docs=[]; let active=-1;
 let complexes=[];   // Feature #4: two-strand hybridization complexes (see CM for live working state)
-const STYLE_IDS=['font','cLetter','cBold','cCircle','frameMode','frameColor','frameW',
+const STYLE_IDS=['font','circSize','cLetter','cBold','cCircle','frameMode','frameColor','frameW',
   'fillMode','fillColor','cBack','cPair','tailMode','backColor','pairColor','dupColor','numEvery',
   'numSize','numColor','numBold','endLabels','endSize','endColor','endBold',
   'bgColor','cTransparent'];
@@ -2551,8 +2610,11 @@ function readStyle(){
 function applyStyle(s){
   if(!s) return;
   STYLE_IDS.forEach(id=>{ if(id in s) setVal(id,s[id]); });
+  // styles saved before circles had their own size: circle diameter was 1.44 x the letter size
+  if(!('circSize' in s) && 'font' in s) setVal('circSize', Math.round((+s.font||18)*1.44));
   if(s.palette) document.querySelectorAll('input[data-id]').forEach(inp=>{ if(s.palette[inp.dataset.id]) inp.value=s.palette[inp.dataset.id]; });
   M.font=+$("font").value; $("fontVal").textContent=M.font+" px";
+  $("circSizeVal").textContent=$("circSize").value+" px";
   $("frameWVal").textContent=$("frameW").value+" px";
   $("numSizeVal").textContent=$("numSize").value+"%"; $("endSizeVal").textContent=$("endSize").value+"%";
   readPalette();
@@ -2567,7 +2629,7 @@ function normRot(r){ r=+r||0; return Math.abs(r)>360 ? r%360 : r; }   // keep wh
 function fmtRot(r){ return String(Math.round(r*10)/10); }   // up to one decimal in the box
 function setRotUI(){ M.rot=normRot(M.rot); $("rot").value=Math.round(M.rot); $("rotNum").value=fmtRot(M.rot); }
 function blankCanvas(){
-  M.n=0; M.selected.clear(); M.selBond.clear(); M.circleColor={}; M.bondColor={}; M.size={}; M.bs={};
+  M.n=0; M.selected.clear(); M.selBond.clear(); M.circleColor={}; M.bondColor={}; M.size={}; M.csize={}; M.bs={};
   updateSelInfo(); updateBondInfo(); render();
 }
 // Writes the live view back into its backing store. In complex view, M still holds whatever
@@ -2581,7 +2643,7 @@ function saveActive(){
   const d=docs[active];
   d.seq=$("seq").value; d.dot=$("dot").value;
   d.color=(M.color&&M.color.length)?M.color.slice():[];
-  d.circleColor={...M.circleColor}; d.bondColor={...M.bondColor}; d.size={...M.size}; d.bs=cloneBS(M.bs);
+  d.circleColor={...M.circleColor}; d.bondColor={...M.bondColor}; d.size={...M.size}; d.csize={...M.csize}; d.bs=cloneBS(M.bs);
   d.offset={x:(M.offX||[]).slice(), y:(M.offY||[]).slice()};
   d.view={zoom:M.zoom,panX:M.panX,panY:M.panY,rot:M.rot};
   d.style=readStyle();
@@ -2597,7 +2659,7 @@ function leaveComplex(){ if(!CM.active) return; saveActiveComplex(); CM.active=f
 // Gives a doc a color[] of the right length (identity palette) if it doesn't already have one.
 function ensureDocColors(d, seq){
   if(!d.color || d.color.length!==seq.length){ d.color=new Array(seq.length); for(let k=0;k<seq.length;k++) d.color[k]=M.palette[seq[k]]||FALLBACK_COLOR; }
-  if(!d.circleColor) d.circleColor={}; if(!d.bondColor) d.bondColor={}; if(!d.size) d.size={}; if(!d.bs) d.bs={};
+  if(!d.circleColor) d.circleColor={}; if(!d.bondColor) d.bondColor={}; if(!d.size) d.size={}; docCSize(d); if(!d.bs) d.bs={};
 }
 function restoreOffsets(saved, n){
   const ok=saved && saved.x && saved.x.length===n;
@@ -2620,7 +2682,7 @@ function applyDoc(i){                     // load doc i into UI + model (does NO
     M.selected.clear(); M.selBond.clear();
     readPalette(); ensureDocColors(d, M.seq);
     M.color=d.color.slice();
-    M.circleColor={...d.circleColor}; M.bondColor={...d.bondColor}; M.size={...d.size}; M.bs=cloneBS(d.bs);
+    M.circleColor={...d.circleColor}; M.bondColor={...d.bondColor}; M.size={...d.size}; M.csize={...d.csize}; M.bs=cloneBS(d.bs);
     updateSelInfo(); updateBondInfo();
     if(d.view){ M.zoom=d.view.zoom; M.panX=d.view.panX; M.panY=d.view.panY; M.rot=d.view.rot; setRotUI(); render(); }
     else { M.rot=0; setRotUI(); fit(); }      // never drawn before -> start at 0°
@@ -2741,6 +2803,12 @@ function renderCxSegs(){
 $("cxAddSeg").onclick=()=>{ const last=cxSegDraft[cxSegDraft.length-1]||{a0:1,a1:1,b0:1,b1:1};
   cxSegDraft.push({a0:last.a1+1,a1:last.a1+1,b0:last.b1+1,b1:last.b1+1}); renderCxSegs(); };
 renderCxSegs();
+// one-line description of the chosen complex mode, under the Mode menu
+const CX_MODE_DESC={
+  replace:"<b>Replace:</b> breaks any pair that touches a region (in either strand) and draws each region as a straight duplex. Supports several regions.",
+  side:"<b>Side-by-side:</b> keeps strand A exactly as drawn and lays B alongside it. Uses the first region only; A's bases may show two bonds."};
+function updateCxModeDesc(){ $("cxModeDesc").innerHTML=CX_MODE_DESC[$("cxMode").value]||""; }
+$("cxMode").addEventListener("change",updateCxModeDesc); updateCxModeDesc();
 $("cxBuild").onclick=()=>{
   $("cxErr").textContent="";
   const ai=+$("cxDocA").value, bi=+$("cxDocB").value;
@@ -2829,7 +2897,7 @@ function serializeState(){
   saveActive();
   return {
     docs: docs.map(d=>({name:d.name, seq:d.seq, dot:d.dot, color:(d.color||[]).slice(),
-      circleColor:{...d.circleColor}, bondColor:{...d.bondColor}, size:{...(d.size||{})}, bs:cloneBS(d.bs),
+      circleColor:{...d.circleColor}, bondColor:{...d.bondColor}, size:{...(d.size||{})}, csize:{...docCSize(d)}, bs:cloneBS(d.bs),
       offset:d.offset?{x:d.offset.x.slice(),y:d.offset.y.slice()}:null,
       view:d.view?{...d.view}:null, style:d.style?JSON.parse(JSON.stringify(d.style)):null})),
     active,
@@ -2922,7 +2990,7 @@ for(const id of ["seq","dot"]) $(id).addEventListener("paste",e=>{
 $("clear").onclick=()=>{                  // blank the active sequence (keeps it in the list)
   leaveComplex();
   $("seq").value=""; $("dot").value=""; $("err").textContent="";
-  if(active>=0){ const d=docs[active]; d.seq=""; d.dot=""; d.color=[]; d.circleColor={}; d.bondColor={}; d.size={}; d.bs={}; d.view=null; d.offset=null; }
+  if(active>=0){ const d=docs[active]; d.seq=""; d.dot=""; d.color=[]; d.circleColor={}; d.bondColor={}; d.size={}; d.csize={}; d.bs={}; d.view=null; d.offset=null; }
   blankCanvas(); renderDocList(); pushHistory(); $("seq").focus();
 };
 // Continuous controls (sliders, color pickers): re-render live on `input`, record ONE undo step on
@@ -2940,6 +3008,7 @@ $("rotNum").oninput=e=>{ const v=parseFloat(e.target.value); if(!Number.isFinite
   M.rot=normRot(v); $("rot").value=Math.round(M.rot); render(); };
 $("rotNum").onchange=()=>{ setRotUI(); render(); touch(); };
 $("rotNum").onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); e.target.blur(); } };
+liveControl("circSize", e=>{ $("circSizeVal").textContent=e.target.value+" px"; });
 liveControl("frameW", e=>{ $("frameWVal").textContent=e.target.value+" px"; });
 liveControl("numSize", e=>{ $("numSizeVal").textContent=e.target.value+"%"; });
 liveControl("endSize", e=>{ $("endSizeVal").textContent=e.target.value+"%"; });
@@ -2989,8 +3058,10 @@ $("selNone").onclick=()=>{ clearSelection(); updateSelInfo(); render(); };
 $("zoomSel").onclick=zoomToSelection;
 $("ringLockBtn").onclick=()=>{ ringLock ? unlockRing() : lockRingFromSelection(); };
 $("selSize").oninput=e=>{ $("selSizeVal").textContent=e.target.value+"%"; };
-$("applySize").onclick=()=>{ if(applySelectedSize()) touch(); };
-$("resetSize").onclick=()=>{ for(const st of strands()) for(const k in st.size) delete st.size[k];
+$("selCSize").oninput=e=>{ $("selCSizeVal").textContent=e.target.value+"%"; };
+$("applySize").onclick=()=>{ if(applySelectedSize('letter')) touch(); };
+$("applyCSize").onclick=()=>{ if(applySelectedSize('circle')) touch(); };
+$("resetSize").onclick=()=>{ for(const st of strands()) for(const m of [st.size,st.csize]) for(const k in m) delete m[k];
   $("sizeInfo").textContent="All bases back to normal size."; render(); touch(); };
 $("colorFileBtn").onclick=()=>$("colorFile").click();
 $("colorFile").onchange=async e=>{ const f=e.target.files[0]; if(!f) return;
@@ -3047,7 +3118,7 @@ $("ex2").onclick=()=>{                 // three-way multiloop
 };
 
 /* tabs (top navigator) */
-const SEL_TABS=new Set(['layout','letters','circles','complex']);   // panes where base-selection controls matter
+const SEL_TABS=new Set(['layout','bases','complex']);   // panes where base-selection controls matter
 document.querySelectorAll('#tabs .tab').forEach(btn=>{
   btn.onclick=()=>{
     const tab=btn.dataset.tab;
@@ -3058,6 +3129,37 @@ document.querySelectorAll('#tabs .tab').forEach(btn=>{
   };
 });
 $("selbar").style.display='none';   // hidden on the Input tab at start
+
+/* (i) help pop-overs. Short how-to text is marked <div class="hint tip"> in the HTML; at start-up each
+   box's tips move into one pop-over, opened by an (i) button at the right of the box's heading, so the
+   panel stays short. Long explanations people need while working (Input, Complex, Export, color-file
+   format) stay inline as plain .hint. Only one pop-over is open at a time; it closes on a click
+   elsewhere, Esc, or a tab switch. */
+function closeTips(){
+  document.querySelectorAll('.ipop.open').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.ibtn.open').forEach(b=>{ b.classList.remove('open'); b.setAttribute('aria-expanded','false'); });
+}
+(function initTips(){
+  document.querySelectorAll('#panel .grp').forEach(g=>{
+    const h=g.querySelector(':scope > h2'), tips=[...g.querySelectorAll(':scope > .hint.tip')];
+    if(!h || !tips.length) return;
+    const pop=document.createElement('div'); pop.className='ipop'; pop.setAttribute('role','note');
+    tips.forEach(t=>pop.appendChild(t));
+    h.after(pop);
+    const b=document.createElement('button'); b.type='button'; b.className='ibtn'; b.textContent='i';
+    b.title='How to use'; b.setAttribute('aria-label','How to use: '+h.textContent.trim());
+    b.setAttribute('aria-expanded','false');
+    h.appendChild(b);
+    b.onclick=e=>{ e.stopPropagation();
+      const open=!pop.classList.contains('open'); closeTips(); if(!open) return;
+      pop.style.top=(h.offsetTop+h.offsetHeight+4)+'px';
+      pop.classList.add('open'); b.classList.add('open'); b.setAttribute('aria-expanded','true');
+      if(pop.scrollIntoView) pop.scrollIntoView({block:'nearest'}); };
+  });
+})();
+document.addEventListener('mousedown',e=>{ if(!e.target.closest('.ipop,.ibtn')) closeTips(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeTips(); });
+document.querySelectorAll('#tabs .tab').forEach(t=>t.addEventListener('click',closeTips));
 
 /* panel resize (drag the divider between #panel and #stage) */
 (function panelResizeInit(){
@@ -3113,7 +3215,7 @@ function resetToDefault(){
   readPalette();
   for(const st of strands()){
     for(let i=0;i<st.n;i++) st.color[i]=M.palette[st.seq[i]]||FALLBACK_COLOR;
-    for(const m of [st.circleColor, st.bondColor, st.size, st.bs]) if(m) for(const k in m) delete m[k];
+    for(const m of [st.circleColor, st.bondColor, st.size, st.csize, st.bs]) if(m) for(const k in m) delete m[k];
     st.offX.fill(0); st.offY.fill(0); st.sel.clear();
   }
   M.selBond.clear();

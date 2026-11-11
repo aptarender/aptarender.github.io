@@ -2,7 +2,29 @@
 
 All notable changes to AptaRender. Newest first.
 
-## 2026-10-30 — v2.2.4
+## 2026-11-11 — v2.3.0
+- **Letters and Circles are now one tab: Bases.** It holds, top to bottom: Letters, Circles, Color by base,
+  Selected bases, and Color from file. There are now six tabs: Input · Layout · Bases · Lines · Complex · Export.
+- **Circle size is separate from letter size.** The old "Font size (all bases)" slider is now **Letter size**
+  and changes only the letters. A new **Circle size (diameter)** slider in the Circles box changes only the
+  circles, so you can draw small letters in big circles or the other way round. Lines stop at whichever is
+  larger, so they never run into a big circle or a big letter.
+- **Selected bases** box (replaces "Selected letters", "Selected circle fill" and "Size of selected bases"):
+  letter color, circle fill, **letter size** and **circle size** for the selection, each with its own Apply,
+  plus Reset all fills / Reset all sizes. The right-click menu also has separate **Letter size** and
+  **Circle size** sliders.
+- **(i) help buttons.** Short how-to text (drag gestures, ring rotation, rotate/flip, bend, free-tail styles,
+  palette, selection, bond colors, numbering) now sits behind an **(i)** at the top right of its box instead of
+  always taking up space. Click (i) to read it; click anywhere else, press Esc, or switch tabs to close it.
+  The Input, Complex and Export tabs and the color-file format keep their explanations on screen.
+- **Cleaner on-screen explanations** (Input, Complex, Export, color-file format): long paragraphs became short
+  notes and small two-column keys (e.g. the bracket legend under the Structure box, SVG vs PNG, Strands vs Colors).
+  The Complex **Mode** menu now just says *Replace* / *Side-by-side*, with a one-line description underneath that
+  changes with your choice. The color-file buttons wrap instead of running off the edge.
+- Saved work from earlier versions opens as before: circles keep the size they were drawn at, and a base you
+  had enlarged keeps both its bigger letter and its bigger circle.
+
+## 2026-10-30 — v2.2.5
 - Right-click menu, **Number** row: the dropdown is now a **Show** checkbox (ticked = this base's number
   is shown). A base whose box matches the "Number every" rule keeps following that rule.
 - **Circle it**: draws a circle around that base's number, in the number's color.
@@ -10,6 +32,8 @@ All notable changes to AptaRender. Newest first.
   Circling or coloring a number also shows it. Both work with "Base + its pair" / "All selected",
   are saved, undoable and exported.
 - **Colors .txt** also saves per-base number colors (new color-file target `number`).
+
+## 2026-10-30 — v2.2.4
 - **5′ / 3′ end labels** (Lines tab → Numbering & end labels → **Show 5′ / 3′ end labels**): labels every
   strand's ends (both strands in a complex), placed in open space past the end like position numbers.
   Own size slider, color and bold.
@@ -24,7 +48,7 @@ All notable changes to AptaRender. Newest first.
   step, and everything is saved and exported. Ctrl+click on a Mac keeps its old meaning (select part).
 - **Colors .txt** now also saves per-base outline colors (new color-file target `outline`).
 
-## 2026-10-30 — v2.2.1-3
+## 2026-10-30 — v2.2.3
 - **Bend selected curve** (Layout tab): select a stretch of unpaired bases (a free end or a loop) and
   click **↻ Curl clockwise** or **↺ Curl counter-clockwise** to bend it into a smooth arc; each click
   curls it more, the other button flattens it and then bends it the other way, and **Straighten**
@@ -35,6 +59,8 @@ All notable changes to AptaRender. Newest first.
   base it hangs from, so a free end can be swung to set off in a new direction before curling it.
 - Example (NanoCluster Beacon, case 6): Flip ↔, Flip ↕, then curl the G-rich end ↻ 13° and the C-rich
   end ↻ 21°: two concentric rings, G outside and C inside, nothing overlapping.
+
+## 2026-10-30 — v2.2.2
 - **Save strands as text** (Export tab → **Strands .txt**): writes the open sequence, or both strands of
   the open complex, as a plain text file: `>name`, sequence, dot-bracket structure (readable as FASTA).
   A complex also gets one `@complex` line with its duplex regions, mode and name. Re-open it with
@@ -47,6 +73,8 @@ All notable changes to AptaRender. Newest first.
   and use the Save dialog when that box is ticked.
 - Import file now ignores `#` comment lines.
 - Not saved in either file: hand-placed positions/flips, bond colors and per-base sizes.
+
+## 2026-10-30 — v2.2.1
 - **Flip / mirror** (Layout tab → Rotate / flip selection): new **Flip ↔ horizontal** and **Flip ↕ vertical**
   buttons. With bases selected they mirror just the selection about the chosen pivot (attachment point
   or center); with nothing selected they mirror the whole drawing about its center. The flip is always
