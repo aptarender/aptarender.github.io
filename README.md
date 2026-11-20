@@ -8,6 +8,11 @@ prediction**; it is purely a drawing/annotation tool for figures you already kno
 
 ### ▶ Live site: https://yjhe99.github.io/aptarender/
 
+📄 **Preprint:** [AptaRender on bioRxiv](https://www.biorxiv.org/content/10.64898/2026.11.12.766329v2)
+(doi 10.64898/2026.11.12.766329). If AptaRender helped with a figure in your work, please cite it:
+
+> He, Y., Zhu, Y., Tran, H., & Yeh, H. C. (2026). AptaRender: an interactive drawing and styling tool for 2D nucleic acid structures. *bioRxiv*, 2026-11.
+
 ---
 
 ## Why
@@ -19,13 +24,19 @@ separates *drawing* from *prediction* so you have full control over how the figu
 
 ## What it does
 
-- **Input:** a sequence plus a nested dot-bracket structure — `( )` and `.`
+- **Input:** a sequence plus a nested dot-bracket structure — `( )` for Watson-Crick pairs,
+  `[ ]` / `{ }` for non-WC pairs (drawn dashed), `.` unpaired, and `+` for the G's of a
+  G-quadruplex
 - **Automatic layout** for hairpins, bulges, internal loops, and multiloops — unpaired
-  bases enclosed by a real base pair are arranged as a loop; unpaired bases *not* enclosed
-  by any pair (free tails, linkers, or an entirely unpaired strand) are drawn as a
-  straight backbone
-- **Two-strand hybridization ("Build a Complex"):** manually pair up a region of one
-  sequence with a region of another and see them drawn as a joined duplex — see
+  bases enclosed by a real base pair are arranged as a loop. With the default **Natural**
+  tail style and two or more stems, the whole outer loop (tails, linkers and the stems'
+  first pairs) is drawn as one round circle with the stems pointing outward
+- **G-quadruplexes:** mark the G's with `+` (four equal runs, e.g. TBA
+  `GGTTGGTGTGGTTGG` / `++..++...++..++`) and the quadruplex is drawn as the textbook
+  cartoon — stacked G-quartets in perspective, each G a colored slab — see
+  [G-quadruplexes](#g-quadruplexes) below
+- **Two-strand hybridization ("Build a Complex"):** manually pair up one or more regions of one
+  sequence with regions of another and see them drawn as joined duplexes — see
   [Using the Complex mode](#using-the-complex-mode-two-strand-hybridization) below
 - **Drag-to-reposition:** click-drag any base (and its whole paired branch) to nudge the
   auto-layout into exactly the shape you want
@@ -35,7 +46,7 @@ separates *drawing* from *prediction* so you have full control over how the figu
 - **Per-base letter color:** by A/U/G/C identity palette, a single monochrome color, or by hand-selecting bases
 - **Base circles:** independent frame and fill — none / custom color / by base identity — plus per-base fill by selection, adjustable frame thickness
 - **Per-hydrogen-bond coloring:** click any base-pair rung and recolor it
-- **Free 5′/3′ tail layouts:** default (straight), flatten, L-shape, or perpendicular
+- **Free 5′/3′ tail layouts:** natural (curves inward), flatten, L-shape, or perpendicular
 - **Backbone / rung colors, position numbering, custom canvas background**
 - **Resizable control panel** — drag the divider to widen or narrow it
 - **Export:** SVG (fully editable — every base is its own text element) and PNG at a chosen scale, with an optional transparent background
@@ -60,7 +71,8 @@ displacement designs, primer binding, or a molecular-beacon–style probe/target
    sequence list (the dropdowns pull from there).
 2. Open the **Complex** tab. Pick **Strand A** and **Strand B**.
 3. Enter the **A range** and **B range** — the 1-indexed start/end positions on each
-   strand that pair up with each other. The two ranges must be the same length.
+   strand that pair up with each other. The two ranges must be the same length. Use
+   **+ Add duplex region** for more than one region (Replace mode draws each as its own ladder).
 4. Choose a **mode**:
    - **Replace** — builds a brand-new straight duplex ladder for the hybridizing region.
      Use this when you want the hetero-duplex to visually dominate and don't mind either
@@ -90,10 +102,31 @@ displacement designs, primer binding, or a molecular-beacon–style probe/target
   perfect result on the first build.
 - **Deleting a sequence that's used in a saved complex** removes that complex too (you'll
   see a note when this happens) — rebuild it if you didn't mean to lose it.
-- Only **one contiguous hybridizing region** between exactly two strands is supported.
-  Multiple separate duplex regions, three or more strands, and automatic complementarity
-  detection are not implemented — everything here is manual, matching the rest of the
-  app's no-prediction philosophy.
+- **Several duplex regions** work in Replace mode; Side-by-side mode uses the first region only.
+  Three or more strands and automatic complementarity detection are not implemented —
+  everything here is manual, matching the rest of the app's no-prediction philosophy.
+- A strand containing a **G-quadruplex** can't be used in a complex yet.
+
+## G-quadruplexes
+
+Mark every G that takes part in a quadruplex with `+` in the structure (the ViennaRNA
+convention). Four runs of `+` of the same length make one quadruplex; the run length is the
+number of stacked G-quartets (`++` = 2 quartets, `+++` = 3, …). Every further 4 runs make
+another quadruplex. G's you don't mark are ordinary bases.
+
+```
+GGTTGGTGTGGTTGG      TBA: quartets G1·G6·G10·G15 and G2·G5·G11·G14,
+++..++...++..++      TT loops below, TGT loop above
+```
+
+- It can sit next to hairpins, stems and free tails in the same strand. Drag any of its bases
+  to move the whole quadruplex.
+- **Lines tab → G-quartet colors** sets the two alternating slab colors; turning off
+  "Base-pair rungs" hides the slabs.
+- **Cautions:** only unpaired bases may sit between a quadruplex's first and last G; every
+  quadruplex is drawn with the chair (lateral-loop) arrangement; inside a larger molecule it's
+  drawn upside down so its first and last G face the rest of the molecule (use Flip ↕ to turn
+  it). AptaRender doesn't decide whether a G4 forms — you mark it.
 
 ## Using drag-to-reposition
 

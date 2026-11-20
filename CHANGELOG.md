@@ -2,6 +2,31 @@
 
 All notable changes to AptaRender. Newest first.
 
+## 2026-11-20 — v2.3.2
+- **G-quadruplexes.** Mark the G's of a quadruplex with `+` in the structure (the ViennaRNA convention):
+  four runs of `+` of the same length, e.g. TBA `GGTTGGTGTGGTTGG` / `++..++...++..++`. It's drawn as the
+  textbook cartoon: the G-quartets stacked in perspective, each G a flat slab along one edge of its quartet
+  (two colors alternating, like the syn/anti look), the strands running between the quartets and the loops
+  arcing over and under the stack. For TBA that gives quartets G1·G6·G10·G15 and G2·G5·G11·G14, the TT loops
+  below and TGT above.
+  - Any run length of 2 or more (`GGGGGG` runs → 6 stacked quartets). Several quadruplexes in one strand
+    (every 4 runs of `+` make one). Only the G's you mark take part, so extra G-runs can stay unpaired.
+  - Works next to hairpins, tails and stems in the same strand. Drag any base of a quadruplex to move the
+    whole thing; it rotates, flips, numbers, exports and saves (Strands .txt keeps the `+`) like the rest.
+  - **Lines tab → G-quartet colors** sets the two slab colors. Turning off base-pair rungs hides the slabs.
+  - Only unpaired bases may sit inside a quadruplex (between its first and last G), every quadruplex is drawn
+    with the chair loop arrangement, and a strand with a quadruplex can't be used in a complex yet — you get
+    a clear message in each case. Inside a larger molecule the cartoon is drawn upside down (its first and last
+    G face the rest of the molecule); Flip ↕ turns it the other way.
+- **Cite AptaRender.** A link to the AptaRender preprint on bioRxiv now sits under the title, and the Export tab's
+  "Contact & feedback" box is now **Cite AptaRender**, with the full reference (He, Zhu, Tran & Yeh, 2026) and asking you to cite the preprint
+  (doi [10.64898/2026.11.12.766329](https://www.biorxiv.org/content/10.64898/2026.11.12.766329v2)) if it helped with a figure.
+- **Free tails curve inward (single sequence).** With the default **Natural** tail style and two or more stems
+  side by side, the whole outer loop — the 5′ tail, the bases where each stem starts, the linkers and the 3′
+  tail — is now drawn as one round circle with the stems pointing outward, instead of a straight baseline
+  with tails curling away. The 5′ and 3′ ends sit a little apart at the bottom. Complexes, single-stem
+  structures and the Flatten / L-shape / Perpendicular styles are unchanged.
+
 ## 2026-11-11 — v2.3.1
 - **Light / dark mode switch** in the bottom-right corner of the canvas. Dark (moon) is the default; click it
   for light mode (sun). It changes the panel, buttons, menus and pop-ups only — the drawing's background is still

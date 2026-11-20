@@ -107,8 +107,13 @@
   .bond-hit{cursor:pointer}
   .grp.tight{padding-bottom:6px}
   a.link{color:var(--accent); cursor:pointer; text-decoration:underline; font-size:11px}
+  a.link.paper{display:inline-block; margin:-6px 0 14px; font-size:11.5px; font-weight:600; text-decoration:none}
+  a.link.paper:hover{text-decoration:underline}
   #contact .contact-by{margin:0; font-size:12px; color:var(--text)}
-  #contact a.link{display:inline-block; margin-top:6px; font-size:12px; font-weight:600}
+  #contact a.link{display:inline-block; margin-top:6px; font-size:12px; font-weight:600; word-break:break-all}
+  #contact .doi{margin-top:4px; font-size:11px; color:var(--muted)}
+  #contact .ref{margin:8px 0 0; padding:7px 9px; font-size:11.5px; line-height:1.45; color:var(--text);
+    background:var(--field); border:1px solid var(--line); border-radius:6px; user-select:text}
   #pantop{position:sticky; top:0; z-index:6; background:var(--panel);
     margin:0 -14px 10px; padding:4px 14px 0; border-bottom:1px solid var(--line)}
   #tabs{display:flex; flex-wrap:wrap; gap:4px; padding-bottom:8px}
@@ -187,13 +192,8 @@
 <div id="panel">
   <h1>AptaRender</h1>
   <p class="sub">Dot-bracket → editable 2D art. No prediction — you supply the structure.</p>
-<p class="sub" style="margin: 0;">
-  <a href="https://www.biorxiv.org/content/10.64898/2026.11.12.766329v2"
-     target="_blank"
-     rel="noopener noreferrer">
-    Read our preprint
-  </a>
-</p>
+  <a class="link paper" href="https://www.biorxiv.org/content/10.64898/2026.11.12.766329v2" target="_blank" rel="noopener">Read the AptaRender preprint on bioRxiv ↗</a>
+
   <div id="pantop">
     <nav id="tabs">
       <button class="tab active" data-tab="input">Input</button>
@@ -243,6 +243,7 @@
         <dt><code>( )</code></dt><dd>Watson-Crick pair</dd>
         <dt><code>[ ]</code> <code>{ }</code></dt><dd>Non-WC pair, drawn dashed</dd>
         <dt><code>.</code></dt><dd>Unpaired base</dd>
+        <dt><code>+</code></dt><dd>G in a G-quadruplex: 4 equal runs, e.g. <code>++..++...++..++</code></dd>
       </dl>
       <div class="note">Pairs must nest (no pseudoknots). On the canvas, drag to pan, scroll to zoom, and drag a
         base to move its branch.</div>
@@ -470,6 +471,14 @@
         <input type="color" id="backColor" value="#4b5563">
         <input type="color" id="pairColor" value="#6b7280">
       </div>
+      <label class="flexlabel"><span>G-quartet colors</span></label>
+      <div class="split">
+        <input type="color" id="g4ColorA" value="#d65fc6" title="G-quadruplex slabs, first color">
+        <input type="color" id="g4ColorB" value="#5bcfe0" title="G-quadruplex slabs, second color">
+      </div>
+      <div class="hint tip">G-quartet colors paint the G slabs of a G-quadruplex ("+" in the structure);
+        they alternate around each quartet and from one quartet to the next. Turning off base-pair rungs
+        hides the slabs too.</div>
     </div>
     <div class="grp">
       <h2>H-bond colors</h2>
@@ -587,9 +596,12 @@
       <div class="hint" id="expInfo"></div>
     </div>
     <div class="grp tight" id="contact">
-      <h2>Cite this tool</h2>
-      <p class="contact-by">Built with Claude</p>
-      <p class="hint" style="margin-top:2px">He, Y., Zhu, Y., Tran, H., & Yeh, H. C. (2026). AptaRender: an interactive drawing and styling tool for 2D nucleic acid structures. bioRxiv, 2026-11.</p>
+      <h2>Cite AptaRender</h2>
+      <p class="contact-by">If AptaRender helped with a figure in your work, please cite our preprint:</p>
+      <p class="ref">He, Y., Zhu, Y., Tran, H., &amp; Yeh, H. C. (2026). AptaRender: an interactive drawing and styling
+        tool for 2D nucleic acid structures. <i>bioRxiv</i>, 2026-11.</p>
+      <a class="link" href="https://www.biorxiv.org/content/10.64898/2026.11.12.766329v2" target="_blank" rel="noopener">Read it on bioRxiv ↗</a>
+      <div class="doi">doi: 10.64898/2026.11.12.766329 · Built with Claude</div>
     </div>
   </section>
 </div>
@@ -622,6 +634,8 @@ const M = {
   seq:"", n:0,
   pt:[],          // nested () pair table, -1 if unpaired
   nonWC:[],       // true at a pair's lower index when written [ ] / { } / < > instead of ( )
+  quads:[],       // G-quadruplexes ("+" in the structure), see parseQuads; each is also a virtual pair in pt
+  vq:[],          // true at a quadruplex's first G: its pt[] pair is virtual (layout only, never drawn)
   x:[], y:[],     // model coords (px units) — the auto-layout baseline, untouched by dragging
   offX:[], offY:[], // per-base manual drag offsets (px, model space), added on top of x/y at render time.
                      // KNOWN LIMITATION: these don't get renormalized if computeLayout reruns (font/tail-mode
@@ -690,7 +704,7 @@ function parseStructure(seq, dot){
   const stack=[];
   for(let i=0;i<n;i++){
     const c=dot[i];
-    if(c==='.'||c==='-'||c===':'||c===','){continue;}
+    if(c==='.'||c==='-'||c===':'||c===','||c==='+'){continue;}
     else if(OPEN[c]!==undefined){ stack.push({i,c}); }
     else if(CLOSE[c]!==undefined){
       if(stack.length===0) throw `Unbalanced "${c}" at position ${i+1}.`;
@@ -700,32 +714,161 @@ function parseStructure(seq, dot){
       pt[i]=top.i; pt[top.i]=i;
       if(c!==')') nonWC[top.i]=true;
     }
-    else throw `Unexpected character ${describeChar(c)} in structure at position ${i+1} (allowed: ( ) [ ] { } < > .).`;
+    else throw `Unexpected character ${describeChar(c)} in structure at position ${i+1} (allowed: ( ) [ ] { } < > . +).`;
   }
   if(stack.length){ const top=stack[stack.length-1]; throw `Unbalanced "${top.c}" at position ${top.i+1} — ${stack.length} left open.`; }
-  return {seq,n,pt,nonWC};
+  const {quads,vq}=parseQuads(seq,dot,pt);
+  return {seq,n,pt,nonWC,quads,vq};
+}
+// G-quadruplexes, ViennaRNA-style: every "+" is a G in a quadruplex; four consecutive runs of "+" of
+// equal length L (2+) make one quadruplex with L stacked G-quartets (e.g. TBA: GGTTGGTGTGGTTGG /
+// ++..++...++..++). Only unpaired bases may sit between its first and last G (no stems inside it yet).
+// To the layout a quadruplex looks like ONE base pair between its first and last G — a "virtual"
+// pair written into pt[] (flagged in vq[] at the lower index, never drawn as a rung) — so loops,
+// stems, tails, dragging and the exterior layouts all treat it like a stem; buildG4 draws its inside.
+function parseQuads(seq,dot,pt){
+  const runs=[];
+  for(let i=0;i<dot.length;i++) if(dot[i]==='+'){ let j=i; while(j+1<dot.length && dot[j+1]==='+') j++; runs.push([i,j]); i=j; }
+  const quads=[], vq=new Array(dot.length).fill(false);
+  if(!runs.length) return {quads,vq};
+  if(runs.length%4) throw `G-quadruplex: found ${runs.length} run${runs.length===1?'':'s'} of "+". Each quadruplex needs exactly 4 runs of the same length, e.g. ++..++..++..++.`;
+  for(let g=0;g<runs.length;g+=4){
+    const R=runs.slice(g,g+4), L=R[0][1]-R[0][0]+1, a=R[0][0], b=R[3][1];
+    if(R.some(r=>r[1]-r[0]+1!==L)) throw `G-quadruplex at ${a+1}–${b+1}: its 4 runs of "+" must be the same length (got ${R.map(r=>r[1]-r[0]+1).join(", ")}).`;
+    if(L<2) throw `G-quadruplex at ${a+1}–${b+1}: each run needs at least 2 G's (one per stacked quartet).`;
+    for(const [s,e] of R) for(let k=s;k<=e;k++) if(seq[k]!=='G') throw `"+" at position ${k+1} is on ${seq[k]}, not G — "+" marks the G's of a quadruplex.`;
+    for(let k=a;k<=b;k++) if(pt[k]!==-1) throw `Base pairs inside a G-quadruplex (positions ${a+1}–${b+1}) aren't supported yet — its loops must be unpaired.`;
+    pt[a]=b; pt[b]=a; vq[a]=true;
+    quads.push({a,b,L,runs:R});
+  }
+  return {quads,vq};
+}
+// The 4 G's of quartet k (0 = the one holding the first and last G), in Hoogsteen ring order run1,
+// run2, run3, run4. run1 and run3 run away from quartet 0, run2 and run4 come back — so for TBA quartet
+// 0 is G1·G6·G10·G15 and quartet 1 is G2·G5·G11·G14.
+function quadLayer(q,k){
+  const [r1,r2,r3,r4]=q.runs, L=q.L;
+  return [r1[0]+k, r2[0]+L-1-k, r3[0]+k, r4[0]+L-1-k];
+}
+function quadSpan(st,i){              // all bases of the quadruplex containing i (G's and loops), else null
+  for(const q of st.quads||[]) if(i>=q.a && i<=q.b){ const o=[]; for(let k=q.a;k<=q.b;k++) o.push(k); return o; }
+  return null;
 }
 
 /* ---------- radial layout (our own) ---------- */
 const SPACING = 42;   // model-space distance between bases (independent of font size)
-function computeLayout(n, pt, S, tailMode){
+// inward (default true) = single-sequence look: with 'natural' tails and 2+ top-level stems the exterior
+// loop is drawn as one circle (layoutExteriorCircle). Every complex caller passes false, which keeps the
+// pre-2.3.2 baseline + outward-curling tails, so the two strands' tails stay apart.
+// quads: G-quadruplexes from parseStructure (each is also a "virtual" pair a-b in pt[]); drawn by buildG4.
+function computeLayout(n, pt, S, tailMode, inward=true, quads=[]){
   const x=new Array(n).fill(0), y=new Array(n).fill(0);
+  const quadAt=new Map(); for(const q of quads||[]) quadAt.set(q.a,q);
+  // ---- G-quadruplexes: drawn as stacked G-quartets in perspective (the classic TBA cartoon) ----
+  // Local "picture" frame (x right, y down): each quartet is a square seen from above and a little to
+  // the side, so it shows as a flat diamond; quartet k sits k·QH below quartet 0 (the one holding the
+  // first and last G). The four G-runs are the diamond's corners in Hoogsteen ring order
+  // run1 = right, run2 = back, run3 = left, run4 = front, each running vertically through the stack.
+  // Chair topology: run1 and run3 go down, run2 and run4 come back up, so run1->run2 and run3->run4
+  // loop under the stack and run2->run3 loops over it. For TBA (GGTTGGTGTGGTTGG) that gives quartets
+  // G1·G6·G10·G15 (top) and G2·G5·G11·G14, TT loops below and TGT above — the textbook picture.
+  const QA=1.75*S, QB=0.62*S, QPHI=12*Math.PI/180, QH=1.7*S;
+  const qCorner=r=>{ const t=QPHI+((4-r)%4)*Math.PI/2; return {x:QA*Math.cos(t), y:QB*Math.sin(t)}; };
+  const g4geom=new Map();
+  function g4Geom(q){                                // local positions of every base of the quadruplex
+    if(g4geom.has(q.a)) return g4geom.get(q.a);
+    const L=q.L, pos=new Map(), placed=[];
+    const C=(r,k)=>{ const c=qCorner(r); return {x:c.x, y:c.y+k*QH}; };
+    q.runs.forEach(([s0],r)=>{ for(let j=0;j<L;j++){ const k=(r%2===0)?j:L-1-j; pos.set(s0+j,C(r,k)); placed.push(C(r,k)); } });
+    const near=pts=>{ let m=Infinity; for(const p of pts) for(const o of placed) m=Math.min(m,Math.hypot(p.x-o.x,p.y-o.y)); return m; };
+    const loop=(lo,hi,p0,p1,by)=>{                  // bases lo..hi from p0 to p1, bowing down (+1) / up (-1)
+      const m=hi-lo+1; if(m<=0) return;
+      // an open oval hanging straight down (or up), like the textbook picture: half an ellipse from p0
+      // to p1 through a point D below/above their midpoint, bases at equal arc length. D grows until
+      // the bonds are ~S long and nothing comes within 0.75·S of a G.
+      const oval=D=>{ const mx=(p0.x+p1.x)/2, my=(p0.y+p1.y)/2, N=120, P=[], cum=[0];
+        for(let i=0;i<=N;i++){ const t=Math.PI*i/N; P.push({x:mx+Math.cos(t)*(p0.x-mx), y:my+Math.cos(t)*(p0.y-my)+by*D*Math.sin(t)});
+          if(i) cum.push(cum[i-1]+Math.hypot(P[i].x-P[i-1].x,P[i].y-P[i-1].y)); }
+        const T=cum[N], out=[]; let j=0;
+        for(let k=1;k<=m;k++){ const s=T*k/(m+1); while(cum[j+1]<s) j++; const f=(s-cum[j])/((cum[j+1]-cum[j])||1);
+          out.push({x:P[j].x+(P[j+1].x-P[j].x)*f, y:P[j].y+(P[j+1].y-P[j].y)*f}); }
+        return {out,T}; };
+      let best=null;
+      for(let D=0.8*S; D<=6*S; D+=0.1*S){
+        const {out,T}=oval(D), d=near(out);
+        if(!best || d>best.d) best={pts:out,d};
+        if(T>=0.95*(m+1)*S && d>=0.75*S){ best={pts:out,d}; break; } }
+      best.pts.forEach((p,t)=>{ pos.set(lo+t,p); placed.push(p); });
+    };
+    const [r1,r2,r3,r4]=q.runs;
+    loop(r1[1]+1, r2[0]-1, C(0,L-1), C(1,L-1), +1);  // run1 -> run2: under the stack
+    loop(r3[1]+1, r4[0]-1, C(2,L-1), C(3,L-1), +1);  // run3 -> run4: under the stack
+    loop(r2[1]+1, r3[0]-1, C(1,0),   C(2,0),   -1);  // run2 -> run3: over the stack
+    const A=pos.get(q.a), B=pos.get(q.b);
+    let cx=0,cy=0; pos.forEach(p=>{ cx+=p.x; cy+=p.y; }); cx/=pos.size; cy/=pos.size;
+    const g={pos, a:A, b:B, w:Math.hypot(B.x-A.x,B.y-A.y), cen:{x:cx,y:cy}};
+    g4geom.set(q.a,g); return g;
+  }
+  // Inside a larger molecule the picture is turned upside down (quartet 0 at the bottom), so the edge
+  // between its first and last G faces the rest of the molecule with nothing in the way. g4Frame gives
+  // that flipped frame: the first G, the unit edge first->last G (l) and the unit normal toward the body (nrm).
+  function g4Frame(G){
+    const fl=p=>({x:p.x,y:-p.y}), A=fl(G.a), B=fl(G.b), cen=fl(G.cen);
+    let lx=B.x-A.x, ly=B.y-A.y; const ll=Math.hypot(lx,ly)||1; lx/=ll; ly/=ll;
+    let nx=-ly, ny=lx; if((cen.x-A.x)*nx+(cen.y-A.y)*ny<0){ nx=-nx; ny=-ny; }
+    return {fl,A,l:{x:lx,y:ly},nrm:{x:nx,y:ny}};
+  }
+  function g4Depth(q){                                // how far it reaches back behind its rung, once mapped
+    const G=g4Geom(q), F=g4Frame(G); let dmin=0;
+    G.pos.forEach(p0=>{ const p=F.fl(p0); dmin=Math.min(dmin,(p.x-F.A.x)*F.nrm.x+(p.y-F.A.y)*F.nrm.y); });
+    return -dmin;
+  }
+  // To its parent a quadruplex is like a stem whose rung (first G -> last G) is g4Geom().w long; in a
+  // loop / the exterior circle it takes extra slots between those two G's to match.
+  const QX=1, extra=it=>(it.t==='p' && quadAt.has(it.a)) ? Math.max(QX, Math.round(g4Geom(quadAt.get(it.a)).w/S)-1) : 0;
+  const rungW=it=>(it.t==='p' && quadAt.has(it.a)) ? g4Geom(quadAt.get(it.a)).w : S;
 
   // build a stem outward from a loop center, then recurse into the child loop
   function buildStem(a,b,cx,cy){
     // a,b already positioned (outer rung on parent loop). axis = outward from center.
     let ux=(x[a]+x[b])/2-cx, uy=(y[a]+y[b])/2-cy;
     let len=Math.hypot(ux,uy)||1; ux/=len; uy/=len;
-    // count stacked pairs
+    if(quadAt.has(a)) return buildG4(quadAt.get(a),ux,uy);
+    // count stacked pairs (a quadruplex isn't a pair to stack; one sitting right on top of the helix
+    // continues it instead, centred one spacing further out, its wider rung straddling the helix)
     let L=1;
-    while(a+L < b-L && pt[a+L]===b-L) L++;
+    while(a+L < b-L && pt[a+L]===b-L && !quadAt.has(a+L)) L++;
     for(let t=1;t<L;t++){
       x[a+t]=x[a]+ux*S*t; y[a+t]=y[a]+uy*S*t;
       x[b-t]=x[b]+ux*S*t; y[b-t]=y[b]+uy*S*t;
     }
     const a2=a+L-1, b2=b-L+1;
+    if(a2+1<b2-1 && pt[a2+1]===b2-1 && quadAt.has(a2+1)){
+      // lifted far enough that whatever it has behind its rung clears the helix
+      const G=g4Geom(quadAt.get(a2+1)), lift=Math.max(S, g4Depth(quadAt.get(a2+1))+0.9*S);
+      let ex=x[b2]-x[a2], ey=y[b2]-y[a2]; const el=Math.hypot(ex,ey)||1; ex/=el; ey/=el;
+      const mx=(x[a2]+x[b2])/2+ux*lift, my=(y[a2]+y[b2])/2+uy*lift, hw=G.w/2;
+      x[a2+1]=mx-ex*hw; y[a2+1]=my-ey*hw; x[b2-1]=mx+ex*hw; y[b2-1]=my+ey*hw;
+      return buildG4(quadAt.get(a2+1),ux,uy);
+    }
     // child loop lies further out; its outward normal points back toward parent (-u)
     drawLoop(a2,b2,-ux,-uy);
+  }
+
+  // Place a quadruplex whose first G (q.a) and last G (q.b) are already placed, growing along u.
+  // When it is the whole molecule it's drawn exactly in the picture frame (quartet 0 on top).
+  // Otherwise the flipped frame (g4Frame) is mapped so its first->last G edge lies along the parent's
+  // rung and its body is on the u side (mirrored if that's what it takes).
+  function buildG4(q,ux,uy){
+    const G=g4Geom(q), a=q.a;
+    if(q.a===0 && q.b===n-1){ G.pos.forEach((p,i)=>{ x[i]=x[a]+p.x-G.a.x; y[i]=y[a]+p.y-G.a.y; }); return; }
+    const F=g4Frame(G);
+    let ex=x[q.b]-x[a], ey=y[q.b]-y[a]; const el=Math.hypot(ex,ey);
+    if(el<1e-9){ ex=-uy; ey=ux; } else { ex/=el; ey/=el; }
+    const d=ux*ex+uy*ey; ux-=d*ex; uy-=d*ey; const ul=Math.hypot(ux,uy)||1; ux/=ul; uy/=ul;
+    const x0=x[a], y0=y[a];
+    G.pos.forEach((p0,i)=>{ const p=F.fl(p0), s=(p.x-F.A.x)*F.l.x+(p.y-F.A.y)*F.l.y, t=(p.x-F.A.x)*F.nrm.x+(p.y-F.A.y)*F.nrm.y;
+      x[i]=x0+s*ex+t*ux; y[i]=y0+s*ey+t*uy; });
   }
 
   // place a loop whose closing pair (ci,cj) is already positioned.
@@ -738,7 +881,12 @@ function computeLayout(n, pt, S, tailMode){
       if(pt[k]===-1){ items.push({t:'b',i:k}); k++; }
       else { items.push({t:'p',a:k,b:pt[k]}); k=pt[k]+1; }
     }
-    let m=2; for(const it of items) m += (it.t==='p'?2:1);
+    let m=2; for(const it of items) m += (it.t==='p'?2:1) + extra(it);
+    // a quadruplex in a loop gets empty slots on both sides (at least 1 each, more until the loop has
+    // >= 14 slots) so the circle is big enough for its width and the loop hanging below it
+    const qit=items.filter(it=>extra(it)>0), qpad=new Map();
+    if(qit.length){ const add=Math.max(2*qit.length, 14-m); qit.forEach((it,k)=>{ const p=Math.floor(add/qit.length)+(k<add%qit.length?1:0);
+      qpad.set(it,[Math.floor(p/2),p-Math.floor(p/2)]); }); m+=add; }
     if(m<2) m=2;
     const r = S/(2*Math.sin(Math.PI/m));
     const h = r*Math.cos(Math.PI/m);
@@ -753,7 +901,9 @@ function computeLayout(n, pt, S, tailMode){
     const order=[{fixed:ci}];
     for(const it of items){
       if(it.t==='b') order.push({set:it.i});
-      else { order.push({set:it.a}); order.push({set:it.b, child:it}); }
+      else { const pd=qpad.get(it)||[0,0]; for(let q=0;q<pd[0];q++) order.push({});
+        order.push({set:it.a}); for(let q=0;q<extra(it);q++) order.push({}); order.push({set:it.b, child:it});
+        for(let q=0;q<pd[1];q++) order.push({}); }
     }
     order.push({fixed:cj});
     for(let p=0;p<order.length;p++){
@@ -787,7 +937,11 @@ function computeLayout(n, pt, S, tailMode){
   // it produced a long, wrong backbone line straight across the whole structure). Track
   // the current direction of travel and flip it every time we pass through a branch.
   const nStems=items.filter(it=>it.t==='p').length;
-  if(nStems>=2) layoutBaseline(items);
+  // Single sequence, 'natural' tails, 2+ top-level stems: the whole exterior loop is one round circle
+  // (see layoutExteriorCircle). Complexes (inward=false) and the other tail styles keep the baseline.
+  const circExt = inward && tailMode==='natural' && nStems>=2;
+  if(circExt) layoutExteriorCircle(items);
+  else if(nStems>=2) layoutBaseline(items);
   else {
   let curX=0, curY=0, dirX=1, dirY=0;
   for(const it of items){
@@ -797,7 +951,8 @@ function computeLayout(n, pt, S, tailMode){
     } else {
       x[it.a]=curX;  y[it.a]=curY;
       const perpX=-dirY, perpY=dirX;
-      x[it.b]=curX+perpX*S;  y[it.b]=curY+perpY*S;   // opposite rail starts one rung-width over
+      const rw=rungW(it);                            // rung width (wider for a quadruplex)
+      x[it.b]=curX+perpX*rw;  y[it.b]=curY+perpY*rw;  // opposite rail starts one rung-width over
       // force buildStem's outward direction to continue along (dirX,dirY) — no turn — by
       // handing it a "center" one step behind the RUNG'S MIDPOINT (not just 'a's own
       // position — a and b generally aren't at the same y, so the midpoint isn't either)
@@ -824,8 +979,8 @@ function computeLayout(n, pt, S, tailMode){
   // along the baseline (the tail-style post-process below reshapes them).
   function layoutBaseline(items){
     for(const it of items) if(it.t==='p'){
-      x[it.a]=0; y[it.a]=0; x[it.b]=S; y[it.b]=0;
-      buildStem(it.a, it.b, S/2, 1);             // center below the rung -> stem grows up (-y)
+      x[it.a]=0; y[it.a]=0; x[it.b]=rungW(it); y[it.b]=0;
+      buildStem(it.a, it.b, x[it.b]/2, 1);       // center below the rung -> stem grows up (-y)
     }
     const shift=(it,dx)=>{ for(let i=it.a;i<=it.b;i++) x[i]+=dx; };
     const placed=[];                             // indices whose final position is fixed
@@ -842,12 +997,13 @@ function computeLayout(n, pt, S, tailMode){
     let prev=first;
     for(let j=k+1;j<items.length;){
       const run=[]; while(j<items.length && items[j].t==='b'){ run.push(items[j].i); j++; }
+      const xr=x[prev.b];
       if(j>=items.length){                                      // trailing 3' tail
-        run.forEach((i,q)=>{ x[i]=x[prev.b]+(q+1)*S; y[i]=0; });
+        run.forEach((i,q)=>{ x[i]=xr+(q+1)*S; y[i]=0; });
         break;
       }
       const it=items[j]; j++;
-      const xb=x[prev.b];
+      const xb=xr;
       let xa=xb+(run.length+1)*S;                               // tightest legal spot...
       while(clearance(it,xa)<S*0.98) xa+=S*0.1;                 // ...nudged right until it clears
       shift(it, xa);
@@ -856,6 +1012,35 @@ function computeLayout(n, pt, S, tailMode){
       for(let i=it.a;i<=it.b;i++) placed.push(i);
       prev=it;
     }
+  }
+
+  // v2.3.2 — single sequence, 'natural' tails, 2+ top-level stems. The exterior loop is drawn as a
+  // circle, the way drawLoop draws a multiloop: the 5' tail, each top-level stem's closing pair
+  // (two adjacent slots one rung apart), the linkers and the 3' tail all sit on one circle in
+  // sequence order, and every stem grows straight outward from it (buildStem with the circle's
+  // center). g empty slots separate the 3' end from the 5' end; the gap is centred at the bottom,
+  // so the sequence runs clockwise from the lower left and the stems mostly point up and out.
+  // g starts at 2 and grows (enlarging the circle) until no two bases are closer than 0.9·S —
+  // e.g. two big neighbouring loops; failing that, the roomiest layout is kept.
+  function layoutExteriorCircle(items){
+    let slots=0; for(const it of items) slots += (it.t==='p' ? 2 : 1) + extra(it);
+    const qid=new Array(n).fill(-1); (quads||[]).forEach((q,k)=>{ for(let i=q.a;i<=q.b;i++) qid[i]=k; });
+    const minDist=()=>{ let m=Infinity;              // (bases of the same quadruplex are its own business)
+      for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){ if(qid[i]>=0 && qid[i]===qid[j]) continue;
+        const d=Math.hypot(x[i]-x[j],y[i]-y[j]); if(d<m) m=d; }
+      return m; };
+    let best=null;
+    for(let g=2; g<=60; g++){
+      const m=slots+g, D=2*Math.PI/m, r=S/(2*Math.sin(Math.PI/m));
+      let th=Math.PI/2 + D*(g+1)/2;                   // first slot just clockwise of the bottom gap
+      const put=i=>{ x[i]=r*Math.cos(th); y[i]=r*Math.sin(th); th+=D; };
+      for(const it of items){ if(it.t==='b') put(it.i); else { put(it.a); th+=D*extra(it); put(it.b); } }
+      for(const it of items) if(it.t==='p') buildStem(it.a, it.b, 0, 0);
+      const md=minDist();
+      if(md>=0.9*S) return;
+      if(!best || md>best.md) best={md, x:x.slice(), y:y.slice()};
+    }
+    for(let i=0;i<n;i++){ x[i]=best.x[i]; y[i]=best.y[i]; }
   }
 
   // ---- reshape the free 5'/3' tails per the chosen style ----
@@ -881,7 +1066,7 @@ function computeLayout(n, pt, S, tailMode){
     }
     return {Rc,astep};
   };
-  if(tailMode){
+  if(tailMode && !circExt){                         // circular exterior already placed its tails
     if(!pt.some(v=>v!==-1)){                          // no stem at all anywhere in this run
       if(n>1 && (tailMode==='natural'||tailMode==='perp'||tailMode==='L')){
         // no paired base to take a tangent/side from here — use the default heading (+x, from
@@ -968,11 +1153,17 @@ function computeLayout(n, pt, S, tailMode){
         const mx=(x[a0]+x[b0])/2, my=(y[a0]+y[b0])/2;
         let ix,iy;                                    // unit vector from the rung INTO the stem
         if(a0+1<b0-1 && pt[a0+1]===b0-1){ ix=(x[a0+1]+x[b0-1])/2-mx; iy=(y[a0+1]+y[b0-1])/2-my; }
+        else if(quadAt.has(a0)){                    // quadruplex: straight up from its rung (its mass is off to one side)
+          ix=-(y[b0]-y[a0]); iy=x[b0]-x[a0]; if(ix*(rcx-mx)+iy*(rcy-my)<0){ ix=-ix; iy=-iy; } }
         else { ix=rcx-mx; iy=rcy-my; }
         const il=Math.hypot(ix,iy)||1; ix/=il; iy/=il;
+        // a quadruplex's rung is wide: it spans 1+xq slots of the circle
+        const xq=quadAt.has(a0)?extra({t:'p',a:a0}):0, c0=Math.hypot(x[b0]-x[a0],y[b0]-y[a0]);
         for(let g=2; g<80; g++){
-          const m=t3.length+t5.length+2+g, D=2*Math.PI/m;
-          const r=S/(2*Math.sin(Math.PI/m)), h=r*Math.cos(Math.PI/m);
+          const m=t3.length+t5.length+2+g+xq, D=2*Math.PI/m;
+          const r=S/(2*Math.sin(Math.PI/m));
+          if(xq && r<c0/2+1e-6) continue;             // circle still too small to pass through the wide rung
+          const h = xq ? Math.sqrt(r*r-c0*c0/4) : r*Math.cos(Math.PI/m);
           const ccx=mx-ix*h, ccy=my-iy*h;             // center sits outside the stem
           const th0=Math.atan2(y[b0]-ccy,x[b0]-ccx), thE=Math.atan2(y[a0]-ccy,x[a0]-ccx);
           let d=thE-th0; while(d>Math.PI)d-=2*Math.PI; while(d<=-Math.PI)d+=2*Math.PI;
@@ -1044,6 +1235,7 @@ function layoutComplex(c){
   let pA,pB;
   try{ pA=parseStructure(docA.seq,docA.dot); pB=parseStructure(docB.seq,docB.dot); }
   catch(e){ return {error:"⚠ Both strands need a valid sequence+structure: "+e}; }
+  if(pA.quads.length||pB.quads.length) return {error:"⚠ G-quadruplexes (\"+\" in the structure) can't be used in a complex yet — draw that strand on its own."};
   const tm=$("tailMode").value;
   const segs=cxSegments(c);
   try{
@@ -1158,7 +1350,7 @@ function attachFlankContinuing(local, attachLocalIdx, S, tailMode, dupEndX, dupE
     localForLayout=new Array(n);
     for(let i=0;i<n;i++){ const j=local[n-1-i]; localForLayout[i]=(j===-1)?-1:(n-1-j); }
   }
-  const lay0=computeLayout(n, localForLayout, S, tailMode);
+  const lay0=computeLayout(n, localForLayout, S, tailMode, false);
   const lay = reversed ? {x:lay0.x.slice().reverse(), y:lay0.y.slice().reverse()} : lay0;
 
   const CLEAR=S*0.85;
@@ -1348,7 +1540,7 @@ function computeComplexLayoutMulti(seqA, ptAOrig, seqB, ptBOrig, segmentsIn, S, 
         const at=attachFlankContinuing(local, 0, S, tailMode, x[i-1], y[i-1], flankDeg(x,y,i-1,-1,isDup,n), occupied);
         for(let t=0;t<m;t++){ x[i+t]=at.x[t]; y[i+t]=at.y[t]; }
       } else {                                           // strand with no duplex at all (defensive)
-        const lay=computeLayout(m, local, S, tailMode);
+        const lay=computeLayout(m, local, S, tailMode, false);
         for(let t=0;t<m;t++){ x[i+t]=lay.x[t]; y[i+t]=lay.y[t]; occupied.push({x:x[i+t],y:y[i+t]}); }
       }
       i=j;
@@ -1381,7 +1573,7 @@ function computeSideHybridLayout(seqA, ptAOrig, seqB, ptBOrig, region, S, tailMo
   const nA=seqA.length, nB=seqB.length, dupLen=validateRegion(region,nA,nB);
   if(dupLen<2) throw "The hybridizing region needs at least 2 nt, to get a direction to offset along from A's own arm.";
 
-  const layA=computeLayout(nA, ptAOrig, S, tailModeA);     // A: completely normal, nothing broken
+  const layA=computeLayout(nA, ptAOrig, S, tailModeA, false);   // A: normal layout, nothing broken (complex tails curve outward)
   // B's own pairs that straddle the hybridizing region (one foot inside [bStart,bEnd], one outside)
   // can't be preserved — their partner is about to be forced onto the offset line, wherever that
   // used to be. Left alone, ptB would still claim the bond exists while the two ends land in
@@ -1485,7 +1677,7 @@ function strands(){
     ];
   }
   if(M.n===0) return [];
-  return [{tag:'S', seq:M.seq, n:M.n, pt:M.pt, nonWC:M.nonWC, x:M.x, y:M.y, offX:M.offX, offY:M.offY,
+  return [{tag:'S', seq:M.seq, n:M.n, pt:M.pt, nonWC:M.nonWC, quads:M.quads||[], vq:M.vq||[], x:M.x, y:M.y, offX:M.offX, offY:M.offY,
     sel:M.selected, color:M.color, circleColor:M.circleColor, bondColor:M.bondColor, size:M.size, csize:M.csize, bs:M.bs, selBond:M.selBond}];
 }
 // inter-strand (hetero-duplex) rungs as [[strandIdx,i],[strandIdx,j]] — empty outside complex mode
@@ -1613,12 +1805,30 @@ function buildScene(interactive){
     E('circle',{cx,cy,r:R,fill:'rgba(255,140,26,0.06)',stroke:SEL_RING,'stroke-width':1.5/M.zoom+0.5,
       'stroke-dasharray':`${6/M.zoom},${4/M.zoom}`});
   }
+  // G-quartets (the textbook cartoon): every G of a quartet is a flat slab lying along one edge of the
+  // quartet's square, from its own corner toward the next G in Hoogsteen ring order, set a little inside
+  // the square — four slabs make a pinwheel. Colors alternate around the ring and from one quartet to
+  // the next (the syn/anti look), from the Lines-tab "G-quartet colors". Built from the display points,
+  // so slabs follow drags and rotation; drawn first so strands and letters sit on top.
+  if(showPair) sts.forEach((st,s)=>{
+    const qc=[$("g4ColorA").value, $("g4ColorB").value];
+    for(const q of st.quads||[]) for(let k=0;k<q.L;k++){
+      const ix=quadLayer(q,k), Q=ix.map(i=>P[s][i]);
+      for(let c=0;c<4;c++){
+        const C=Q[c], N=Q[(c+1)%4], V=Q[(c+3)%4];
+        const p0={x:C.x+0.12*(N.x-C.x), y:C.y+0.12*(N.y-C.y)}, L={x:0.6*(N.x-C.x), y:0.6*(N.y-C.y)}, T={x:0.26*(V.x-C.x), y:0.26*(V.y-C.y)};
+        const pts=[p0,{x:p0.x+L.x,y:p0.y+L.y},{x:p0.x+L.x+T.x,y:p0.y+L.y+T.y},{x:p0.x+T.x,y:p0.y+T.y}];
+        E('polygon',{points:pts.map(p=>p.x+','+p.y).join(' '), fill:qc[(c+k)%2], 'fill-opacity':0.9,
+          stroke:'#00000033', 'stroke-width':Math.max(0.5,font*0.03), class:'quartet'});
+      }
+    }
+  });
   if(showPair){
     for(const [[sa,ia],[sb,ib]] of heteroPairs())
       line(seg(P[sa][ia],P[sb][ib],gap(sts[sa],ia),gap(sts[sb],ib)), dupColor, Math.max(1.6,font*0.13));
     sts.forEach((st,s)=>{
       for(let i=0;i<st.n;i++){
-        const j=st.pt[i]; if(j<=i) continue;
+        const j=st.pt[i]; if(j<=i || (st.vq&&st.vq[i])) continue;   // a quadruplex's virtual pair: no rung
         const sg=seg(P[s][i],P[s][j],gap(st,i),gap(st,j));
         if(interactive && st.selBond && st.selBond.has(i))
           line(sg, BOND_HI, rungW+6/M.zoom+2, {opacity:0.9});
@@ -1723,8 +1933,10 @@ function placeLabels(sts,P,font,items){
     for(let i=0;i<st.n;i++){
       pts.push({x:P[s][i].x, y:P[s][i].y, r:footR(st,i)});
       if(i<st.n-1) segs.push([P[s][i],P[s][i+1]]);
-      if(st.pt[i]>i) segs.push([P[s][i],P[s][st.pt[i]]]);
+      if(st.pt[i]>i && !(st.vq&&st.vq[i])) segs.push([P[s][i],P[s][st.pt[i]]]);
     }
+    for(const q of st.quads||[]) for(let k=0;k<q.L;k++){ const ix=quadLayer(q,k);
+      for(let c=0;c<4;c++) segs.push([P[s][ix[c]],P[s][ix[(c+1)%4]]]); }
   });
   const hetero=new Map();                     // cross-strand partner, so labels also point away from it
   for(const [[sa,ia],[sb,ib]] of heteroPairs()){ segs.push([P[sa][ia],P[sb][ib]]); hetero.set(sa+':'+ia,P[sb][ib]); hetero.set(sb+':'+ib,P[sa][ia]); }
@@ -1739,7 +1951,7 @@ function placeLabels(sts,P,font,items){
       const ringR=it.ring ? tr+lw*0.3 : 0;                             // circle drawn around a number
       const rl=Math.max(tr, ringR+lw*0.06) + font*0.06;                // label "radius" for spacing
       let vx=0, vy=0;                                                // preferred: away from bonds
-      for(const j of [i-1,i+1,st.pt[i]]) if(j>=0 && j<st.n && j!==-1){
+      for(const j of [i-1,i+1,(st.vq&&st.vq[Math.min(i,st.pt[i])])?-1:st.pt[i]]) if(j>=0 && j<st.n && j!==-1){
         const dx=p.x-P[s][j].x, dy=p.y-P[s][j].y, L=Math.hypot(dx,dy)||1; vx+=dx/L; vy+=dy/L; }
       const hp=hetero.get(s+':'+i);
       if(hp){ const dx=p.x-hp.x, dy=p.y-hp.y, L=Math.hypot(dx,dy)||1; vx+=dx/L; vy+=dy/L; }
@@ -1985,7 +2197,8 @@ function colorSampleText(){
   sts.forEach((st,s)=>{
     const pre = CM.active ? (s===0?'A:':'B:') : '';
     for(let i=0;i<st.n;i++){
-      const part = st.pt[i]!==-1 ? 'stem' : (enclosingOpener(st.pt,i)!==-1 ? 'loop' : 'free');
+      const inQ=(st.quads||[]).some(q=>q.runs.some(([a,b])=>i>=a&&i<=b));
+      const part = (st.pt[i]!==-1 || inQ) ? 'stem' : (enclosingOpener(st.pt,i)!==-1 ? 'loop' : 'free');
       L.push(`${(pre+(i+1)).padEnd(6)}${st.seq[i]}  ${PART_COLORS[part]}`);
     }
   });
@@ -2109,8 +2322,8 @@ function build(){
   let parsed;
   try{ parsed=parseStructure($("seq").value,$("dot").value); }
   catch(e){ $("err").textContent="⚠ "+e; return; }
-  M.seq=parsed.seq; M.n=parsed.n; M.pt=parsed.pt; M.nonWC=parsed.nonWC;
-  const lay=computeLayout(M.n,M.pt,SPACING,$("tailMode").value);
+  M.seq=parsed.seq; M.n=parsed.n; M.pt=parsed.pt; M.nonWC=parsed.nonWC; M.quads=parsed.quads; M.vq=parsed.vq;
+  const lay=computeLayout(M.n,M.pt,SPACING,$("tailMode").value,true,M.quads);
   M.x=lay.x; M.y=lay.y;
   M.offX=new Array(M.n).fill(0); M.offY=new Array(M.n).fill(0);
   M.color=new Array(M.n);
@@ -2131,7 +2344,7 @@ function relayout(){
     return render();
   }
   if(M.n===0) return;
-  const lay=computeLayout(M.n,M.pt,SPACING,$("tailMode").value);
+  const lay=computeLayout(M.n,M.pt,SPACING,$("tailMode").value,true,M.quads);
   M.x=lay.x; M.y=lay.y;
   // the tail style wholly redefines where the free 5'/3' bases go, so any old drag offset on
   // them would just distort the new shape (and made the dropdown look like it did nothing)
@@ -2306,7 +2519,7 @@ function bendSelection(dir, stepDeg){
 let baseMenu=null;                      // {s,i,hi:Set("s:i") of the bases being edited}
 function partnerOf(s,i){
   const st=strands()[s]; if(!st) return null;
-  if(st.pt[i]!==-1) return {s,i:st.pt[i]};
+  if(st.pt[i]!==-1 && !(st.vq&&st.vq[Math.min(i,st.pt[i])])) return {s,i:st.pt[i]};
   for(const [[a,ia],[b,ib]] of heteroPairs()){ if(a===s&&ia===i) return {s:b,i:ib}; if(b===s&&ib===i) return {s:a,i:ia}; }
   return null;
 }
@@ -2475,9 +2688,10 @@ svg.addEventListener("mousedown",e=>{
   if(baseEl){
     const s=+baseEl.dataset.s, i=+baseEl.dataset.i, sts=strands(), st=sts[s];
     let sets, part=null;
-    if(e.ctrlKey||e.metaKey){ part={s,idx:partIndicesIn(st.pt,i)}; sets=[part]; }
+    const qs=quadSpan(st,i);                      // a quadruplex moves as one block
+    if(e.ctrlKey||e.metaKey){ part={s,idx:qs||partIndicesIn(st.pt,i)}; sets=[part]; }
     else if(!e.altKey && st.sel.has(i) && selCount()>1) sets=sts.map((t,k)=>({s:k,idx:[...t.sel]}));
-    else sets=[{s, idx:branchIndicesIn(st.pt, i, !e.altKey)}];
+    else sets=[{s, idx:(!e.altKey && qs && !(st.pt[i]!==-1 && !(st.vq[Math.min(i,st.pt[i])]))) ? qs : branchIndicesIn(st.pt, i, !e.altKey)}];
     baseDrag={sets, part, lastX:e.clientX, lastY:e.clientY, moved:false};
     e.preventDefault();
     return;                                   // don't also start a canvas pan
@@ -2632,7 +2846,7 @@ const LIMIT=20;
 let docs=[]; let active=-1;
 let complexes=[];   // Feature #4: two-strand hybridization complexes (see CM for live working state)
 const STYLE_IDS=['font','circSize','cLetter','cBold','cCircle','frameMode','frameColor','frameW',
-  'fillMode','fillColor','cBack','cPair','tailMode','backColor','pairColor','dupColor','numEvery',
+  'fillMode','fillColor','cBack','cPair','tailMode','backColor','pairColor','dupColor','g4ColorA','g4ColorB','numEvery',
   'numSize','numColor','numBold','endLabels','endSize','endColor','endBold',
   'bgColor','cTransparent'];
 function elVal(id){ const e=$(id); return e.type==='checkbox'?e.checked:e.value; }
@@ -2664,7 +2878,7 @@ function normRot(r){ r=+r||0; return Math.abs(r)>360 ? r%360 : r; }   // keep wh
 function fmtRot(r){ return String(Math.round(r*10)/10); }   // up to one decimal in the box
 function setRotUI(){ M.rot=normRot(M.rot); $("rot").value=Math.round(M.rot); $("rotNum").value=fmtRot(M.rot); }
 function blankCanvas(){
-  M.n=0; M.selected.clear(); M.selBond.clear(); M.circleColor={}; M.bondColor={}; M.size={}; M.csize={}; M.bs={};
+  M.n=0; M.quads=[]; M.vq=[]; M.selected.clear(); M.selBond.clear(); M.circleColor={}; M.bondColor={}; M.size={}; M.csize={}; M.bs={};
   updateSelInfo(); updateBondInfo(); render();
 }
 // Writes the live view back into its backing store. In complex view, M still holds whatever
@@ -2710,8 +2924,8 @@ function applyDoc(i){                     // load doc i into UI + model (does NO
     let parsed;
     try{ parsed=parseStructure(d.seq,d.dot); }
     catch(e){ $("err").textContent="⚠ "+e; blankCanvas(); renderDocList(); renderComplexList(); return; }
-    M.seq=parsed.seq; M.n=parsed.n; M.pt=parsed.pt; M.nonWC=parsed.nonWC;
-    const lay=computeLayout(M.n,M.pt,SPACING,$("tailMode").value);
+    M.seq=parsed.seq; M.n=parsed.n; M.pt=parsed.pt; M.nonWC=parsed.nonWC; M.quads=parsed.quads; M.vq=parsed.vq;
+    const lay=computeLayout(M.n,M.pt,SPACING,$("tailMode").value,true,M.quads);
     M.x=lay.x; M.y=lay.y;
     [M.offX,M.offY]=restoreOffsets(d.offset, M.n);
     M.selected.clear(); M.selBond.clear();
@@ -2897,7 +3111,7 @@ function parseFasta(text){
     if(/^@complex\b/i.test(line)){ recs.cx.push(parseComplexLine(line)); continue; }
     if(line[0]==='>'){ cur={name:line.slice(1).trim()||('seq '+(recs.length+1)),seq:'',dot:''}; recs.push(cur); }
     else { if(!cur){ cur={name:'seq '+(recs.length+1),seq:'',dot:''}; recs.push(cur); }
-      if(cur.seq && /^[-().:,\[\]{}<>]+$/.test(line)) cur.dot+=line; else cur.seq+=line.replace(/\s+/g,''); }
+      if(cur.seq && /^[-().:,\[\]{}<>+]+$/.test(line)) cur.dot+=line; else cur.seq+=line.replace(/\s+/g,''); }
   }
   const out=recs.filter(r=>r.seq); out.cx=recs.cx; return out;
 }
@@ -3049,7 +3263,7 @@ liveControl("numSize", e=>{ $("numSizeVal").textContent=e.target.value+"%"; });
 liveControl("endSize", e=>{ $("endSizeVal").textContent=e.target.value+"%"; });
 ["numColor","endColor"].forEach(id=>liveControl(id));
 liveControl("bgColor", e=>{ $("stage").style.background=e.target.value; });
-["frameColor","fillColor","backColor","pairColor","dupColor","numEvery"].forEach(id=>liveControl(id));
+["frameColor","fillColor","backColor","pairColor","dupColor","g4ColorA","g4ColorB","numEvery"].forEach(id=>liveControl(id));
 document.querySelectorAll("input[data-id]").forEach(inp=>{
   inp.oninput=()=>{ M.palette[inp.dataset.id]=inp.value; render(); };   // identity colors (circles "by base")
   inp.onchange=()=>touch();
@@ -3124,7 +3338,7 @@ for(const [id,axis] of [["flipH","h"],["flipV","v"]]) $(id).onclick=()=>{
 };
 // H-bonds (single-sequence mode only — complexes don't support per-bond click-select in this version)
 $("applyBond").onclick=()=>{const c=$("bondColor").value; M.selBond.forEach(i=>M.bondColor[i]=c); render(); touch();};
-$("bondAll").onclick=()=>{M.selBond.clear();for(let i=0;i<M.n;i++)if(M.pt[i]>i)M.selBond.add(i);updateBondInfo();render();};
+$("bondAll").onclick=()=>{M.selBond.clear();for(let i=0;i<M.n;i++)if(M.pt[i]>i&&!M.vq[i])M.selBond.add(i);updateBondInfo();render();};
 $("bondReset").onclick=()=>{M.bondColor={};M.selBond.clear();updateBondInfo();render(); touch();};
 // discrete toggles that only re-render
 ["cCircle","cBack","cPair","cLetter","cBold","frameMode","fillMode","cTransparent","numBold","endLabels","endBold"].forEach(id=>$(id).onchange=()=>{render(); touch();});
