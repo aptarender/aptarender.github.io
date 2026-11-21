@@ -2,6 +2,14 @@
 
 All notable changes to AptaRender. Newest first.
 
+## 2026-11-20 — v2.3.3
+- **Complexes with several duplex regions: pairs between the duplexes now draw as real helices.** When a strand's
+  stretch between two duplex regions also pairs with itself (e.g. a small hairpin in the loop between two arms),
+  those pairs used to be stretched into long lines across a big ring. Now each such stem is drawn as a normal helix
+  with its own loop, growing out of the connecting loop between the two duplexes; if it would run into a duplex it
+  tilts away a little. Connecting loops with no pairs of their own, single-region complexes and side-by-side mode
+  draw exactly as before.
+
 ## 2026-11-20 — v2.3.2
 - **G-quadruplexes.** Mark the G's of a quadruplex with `+` in the structure (the ViennaRNA convention):
   four runs of `+` of the same length, e.g. TBA `GGTTGGTGTGGTTGG` / `++..++...++..++`. It's drawn as the

@@ -1523,6 +1523,54 @@ function computeComplexLayoutMulti(seqA, ptAOrig, seqB, ptBOrig, segmentsIn, S, 
     occupied.push({x:xA[s.aStart+k],y:yA[s.aStart+k]});
     occupied.push({x:xB[s.bEnd-k],y:yB[s.bEnd-k]});
   }
+  // A run between two ladders that pairs with itself (v2.3.3). It used to be spread along one arc like
+  // an unpaired loop, so its own pairs were drawn as long lines across the ring. Now it's laid out
+  // like a multiloop closed by the two ladder ends: the arc holds one slot per unpaired base and two
+  // neighbouring slots (one spacing apart) per stem, and each stem is laid out on its own with
+  // computeLayout and attached to its two slots, growing away from the arc's center (mirrored if need
+  // be), so its pairs are normal rungs with the hairpin/internal loops it encloses.
+  function bridgeWithStems(i,m,local,x,y,bulgeY){
+    const items=[]; for(let k=0;k<m;){ if(local[k]===-1){ items.push({k}); k++; } else { items.push({a:k,b:local[k]}); k=local[k]+1; } }
+    const slots=items.reduce((s,it)=>s+(it.a===undefined?1:2),0);
+    const pL={x:x[i-1],y:y[i-1]}, pR={x:x[i+m],y:y[i+m]};
+    const pts=arcRun(pL,pR,slots,{x:0,y:bulgeY},S);
+    const fitPts=[pL,...pts,pR], cf=circleFit(fitPts);
+    let q=0;
+    for(const it of items){
+      if(it.a===undefined){ x[i+it.k]=pts[q].x; y[i+it.k]=pts[q].y; occupied.push(pts[q]); q++; continue; }
+      const pa=pts[q], pb=pts[q+1]; q+=2;
+      // outward = away from the arc's center; on a (nearly) straight run, toward the side the run bows to
+      let ux=(pa.x+pb.x)/2-cf.cx, uy=(pa.y+pb.y)/2-cf.cy, ul=Math.hypot(ux,uy);
+      if(!isFinite(ul) || ul<1e-6 || cf.R>50*S){ ux=0; uy=bulgeY; ul=1; }
+      ux/=ul; uy/=ul;
+      const len=it.b-it.a+1, sub=local.slice(it.a,it.b+1).map(v=>v===-1?-1:v-it.a);
+      const L=computeLayout(len, sub, S, tailMode, false);
+      const A={x:L.x[0],y:L.y[0]}, B={x:L.x[len-1],y:L.y[len-1]};
+      let lx=B.x-A.x, ly=B.y-A.y; const ll=Math.hypot(lx,ly)||1; lx/=ll; ly/=ll;
+      let cx=0,cy=0; for(let t=0;t<len;t++){ cx+=L.x[t]; cy+=L.y[t]; } cx/=len; cy/=len;
+      let nx=-ly, ny=lx; if((cx-A.x)*nx+(cy-A.y)*ny<0){ nx=-nx; ny=-ny; }   // local "into the stem" side
+      let ex=pb.x-pa.x, ey=pb.y-pa.y; const el=Math.hypot(ex,ey)||1; ex/=el; ey/=el;
+      const d=ux*ex+uy*ey; ux-=d*ex; uy-=d*ey; const u2=Math.hypot(ux,uy)||1; ux/=u2; uy/=u2;
+      // Outward, square to its two slots, is the first choice. If that runs into something already drawn
+      // (typically a stem that starts right at a ladder end, where the arc tucks under the ladder), the
+      // stem's base is tilted about its midpoint — small angles first, then the inward side — and the
+      // first placement that keeps 0.9·S from everything wins (else the roomiest one).
+      const others=occupied.concat(pts.filter((p,k)=>k<q-2||k>=q));
+      const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+      const place=(phi,sg)=>{ const c=Math.cos(phi), sn=Math.sin(phi);
+        const e2x=ex*c-ey*sn, e2y=ex*sn+ey*c, u2x=ux*c-uy*sn, u2y=ux*sn+uy*c;
+        const ax=mx-e2x*S/2, ay=my-e2y*S/2, out=[];
+        for(let t=0;t<len;t++){ const s=(L.x[t]-A.x)*lx+(L.y[t]-A.y)*ly, h=(L.x[t]-A.x)*nx+(L.y[t]-A.y)*ny;
+          out.push({x:ax+s*e2x+sg*h*u2x, y:ay+s*e2y+sg*h*u2y}); }
+        return out; };
+      const clear=ps=>{ let mn=Infinity; for(const p of ps) for(const o of others) mn=Math.min(mn,Math.hypot(p.x-o.x,p.y-o.y)); return mn; };
+      const D=Math.PI/180, tries=[[0,1],[20,1],[-20,1],[40,1],[-40,1],[60,1],[-60,1],[0,-1],[80,1],[-80,1],[20,-1],[-20,-1],[100,1],[-100,1]];
+      let best=null, bestC=-Infinity;
+      for(const [deg,sg] of tries){ const ps=place(deg*D,sg), c=clear(ps);
+        if(c>=0.9*S){ best=ps; break; } if(c>bestC){ bestC=c; best=ps; } }
+      best.forEach((p,t)=>{ x[i+it.a+t]=p.x; y[i+it.a+t]=p.y; occupied.push(p); });
+    }
+  }
   function fill(n,isDup,pt,x,y,bulgeY){
     let i=0;
     while(i<n){
@@ -1530,7 +1578,9 @@ function computeComplexLayoutMulti(seqA, ptAOrig, seqB, ptBOrig, segmentsIn, S, 
       let j=i; while(j<n && !isDup[j]) j++;
       const m=j-i, local=sliceFlankPT(pt,i,j);
       const hasL=i>0 && isDup[i-1], hasR=j<n && isDup[j];
-      if(hasL && hasR){                                 // single-stranded run between two ladders -> loop
+      if(hasL && hasR && local.some(v=>v!==-1)){        // run between two ladders WITH its own pairs
+        bridgeWithStems(i,m,local,x,y,bulgeY);
+      } else if(hasL && hasR){                          // single-stranded run between two ladders -> loop
         const pts=arcRun({x:x[i-1],y:y[i-1]},{x:x[j],y:y[j]}, m, {x:0,y:bulgeY}, S);
         for(let t=0;t<m;t++){ x[i+t]=pts[t].x; y[i+t]=pts[t].y; occupied.push(pts[t]); }
       } else if(hasR){                                   // leading flank (anchor is base j)

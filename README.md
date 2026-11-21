@@ -72,7 +72,8 @@ displacement designs, primer binding, or a molecular-beacon–style probe/target
 2. Open the **Complex** tab. Pick **Strand A** and **Strand B**.
 3. Enter the **A range** and **B range** — the 1-indexed start/end positions on each
    strand that pair up with each other. The two ranges must be the same length. Use
-   **+ Add duplex region** for more than one region (Replace mode draws each as its own ladder).
+   **+ Add duplex region** for more than one region (Replace mode draws each as its own ladder;
+   a strand's own pairs in the stretch between two ladders are drawn as small helices there).
 4. Choose a **mode**:
    - **Replace** — builds a brand-new straight duplex ladder for the hybridizing region.
      Use this when you want the hetero-duplex to visually dominate and don't mind either
