@@ -6,7 +6,7 @@ You provide the sequence and its dot-bracket structure — AptaRender gives you 
 editable 2D layout for making clean, publication-quality figures. It does **no structure
 prediction**; it is purely a drawing/annotation tool for figures you already know.
 
-### ▶ Live site: https://yjhe99.github.io/aptarender/
+### ▶ Live site: https://aptarender.github.io/
 
 📄 **Preprint:** [AptaRender on bioRxiv](https://www.biorxiv.org/content/10.64898/2026.11.12.766329v2)
 (doi 10.64898/2026.11.12.766329). If AptaRender helped with a figure in your work, please cite it:
